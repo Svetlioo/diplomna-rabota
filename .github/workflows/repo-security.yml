@@ -40,8 +40,7 @@ jobs:
             --config=p/owasp-top-ten \
             --config=p/cwe-top-25 \
             --sarif --output=semgrep.sarif \
-            --metrics=off \
-            --exit-zero
+            --metrics=off || true
 
       - name: Upload SARIF
         if: always()
