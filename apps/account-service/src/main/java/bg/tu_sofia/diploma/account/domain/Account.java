@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ public class Account {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
+    @Version
     @Column(nullable = false)
     private long version;
 
@@ -49,13 +51,11 @@ public class Account {
         account.id = UUID.randomUUID();
         account.ownerName = ownerName;
         account.balance = initialBalance;
-        account.version = 0L;
         return account;
     }
 
     public void deposit(BigDecimal amount) {
         this.balance = this.balance.add(amount);
-        this.version++;
     }
 
     public void withdraw(BigDecimal amount) {
@@ -63,6 +63,5 @@ public class Account {
             throw new IllegalStateException("Insufficient funds");
         }
         this.balance = this.balance.subtract(amount);
-        this.version++;
     }
 }
