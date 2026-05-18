@@ -90,7 +90,7 @@ jobs:
         run: |
           version=$(./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout | sed 's/-SNAPSHOT//')
           short_sha=${GITHUB_SHA::7}
-          echo "tag=${version}-r${{ github.run_number }}-${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "tag=${version}-build.${{ github.run_number }}-${short_sha}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.0.0
