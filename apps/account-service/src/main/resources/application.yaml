@@ -1,3 +1,19 @@
 spring:
   application:
     name: account-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/account_service}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    # Do not modify schema; Flyway owns it. Validate ensures entities match
+    # the migrated schema at startup, failing fast on drift.
+    hibernate:
+      ddl-auto: validate
+    # Disable Open-Session-In-View: keep the Hibernate session bounded to
+    # @Transactional methods. Forces explicit DTO mapping (no lazy loads
+    # leaking into the JSON layer) and frees DB connections sooner.
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}
