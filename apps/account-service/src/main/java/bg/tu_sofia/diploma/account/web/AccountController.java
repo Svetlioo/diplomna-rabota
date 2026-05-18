@@ -29,7 +29,7 @@ public class AccountController {
     @ResponseStatus(HttpStatus.CREATED)
     public AccountResponse create(@Valid @RequestBody CreateAccountRequest request) {
         return AccountResponse.from(
-                accountService.createAccount(request.ownerName(), request.initialBalance())
+                accountService.createAccount(request.ownerName(), request.initialBalance(), request.currency())
         );
     }
 

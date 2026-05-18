@@ -10,6 +10,7 @@ public record AccountResponse(
         UUID id,
         String ownerName,
         BigDecimal balance,
+        String currency,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -19,6 +20,7 @@ public record AccountResponse(
                 account.getId(),
                 account.getOwnerName(),
                 account.getBalance(),
+                account.getCurrency(),
                 account.getCreatedAt(),
                 account.getUpdatedAt()
         );

@@ -34,6 +34,9 @@ public class Account {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
+    @Column(nullable = false, length = 3)
+    private String currency;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -46,11 +49,12 @@ public class Account {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public static Account open(String ownerName, BigDecimal initialBalance) {
+    public static Account open(String ownerName, BigDecimal initialBalance, String currency) {
         Account account = new Account();
         account.id = UUID.randomUUID();
         account.ownerName = ownerName;
         account.balance = initialBalance;
+        account.currency = currency;
         return account;
     }
 
