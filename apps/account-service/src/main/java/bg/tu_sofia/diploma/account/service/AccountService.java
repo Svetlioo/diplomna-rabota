@@ -16,8 +16,8 @@ public class AccountService {
     private final AccountRepository accountRepository;
 
     @Transactional
-    public Account createAccount(String ownerName, BigDecimal initialBalance) {
-        Account account = Account.open(ownerName, initialBalance);
+    public Account createAccount(String ownerName, BigDecimal initialBalance, String currency) {
+        Account account = Account.open(ownerName, initialBalance, currency);
         return accountRepository.save(account);
     }
 
