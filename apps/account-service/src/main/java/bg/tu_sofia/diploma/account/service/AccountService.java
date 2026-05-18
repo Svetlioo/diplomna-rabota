@@ -17,7 +17,8 @@ public class AccountService {
 
     @Transactional
     public Account createAccount(String ownerName, BigDecimal initialBalance) {
-        return accountRepository.insert(UUID.randomUUID(), ownerName, initialBalance);
+        Account account = Account.open(ownerName, initialBalance);
+        return accountRepository.save(account);
     }
 
     @Transactional(readOnly = true)
@@ -28,16 +29,21 @@ public class AccountService {
 
     @Transactional
     public Account deposit(UUID id, BigDecimal amount) {
-        accountRepository.findById(id)
+        Account account = accountRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
-        return accountRepository.deposit(id, amount);
+        account.deposit(amount);
+        return accountRepository.save(account);
     }
 
     @Transactional
     public Account withdraw(UUID id, BigDecimal amount) {
-        accountRepository.findById(id)
+        Account account = accountRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
-        return accountRepository.withdrawIfSufficient(id, amount)
-                .orElseThrow(InsufficientFundsException::new);
+        try {
+            account.withdraw(amount);
+        } catch (IllegalStateException e) {
+            throw new InsufficientFundsException();
+        }
+        return accountRepository.save(account);
     }
 }

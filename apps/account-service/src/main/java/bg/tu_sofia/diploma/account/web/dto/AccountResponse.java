@@ -16,11 +16,11 @@ public record AccountResponse(
 
     public static AccountResponse from(Account account) {
         return new AccountResponse(
-                account.id(),
-                account.ownerName(),
-                account.balance(),
-                account.createdAt(),
-                account.updatedAt()
+                account.getId(),
+                account.getOwnerName(),
+                account.getBalance(),
+                account.getCreatedAt(),
+                account.getUpdatedAt()
         );
     }
 }
