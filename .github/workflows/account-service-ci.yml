@@ -85,6 +85,13 @@ jobs:
       - name: Package JAR
         run: ./mvnw -B -q -DskipTests package
 
+      - name: Extract version from pom.xml
+        id: ver
+        run: |
+          version=$(./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout | sed 's/-SNAPSHOT//')
+          short_sha=${GITHUB_SHA::7}
+          echo "tag=${version}-build.${{ github.run_number }}-${short_sha}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.0.0
 
@@ -102,6 +109,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=raw,value=${{ steps.ver.outputs.tag }}
             type=sha,format=long
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
 
