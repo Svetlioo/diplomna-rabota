@@ -22,3 +22,57 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Internal planning (not for public repo)
+CLAUDE.md
+PLAN.md
+
+# Secrets & credentials
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+kubeconfig
+*.kubeconfig
+cosign.key
+
+# Spring Boot local configs
+application-local.*
+application-secret*.*
+application-dev.*
+!application-*.example
+
+# Build artifacts
+target/
+build/
+.gradle/
+node_modules/
+dist/
+__pycache__/
+.venv/
+venv/
+
+# Terraform state (contains secrets)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Scan outputs
+sbom.*
+trivy-results.*
+gitleaks-report.*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
