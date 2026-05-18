@@ -71,7 +71,7 @@ jobs:
         working-directory: apps/account-service
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository_owner }}/account-service
+      IMAGE_NAME: svetlioo/account-service
     steps:
       - uses: actions/checkout@v6.0.2
 
