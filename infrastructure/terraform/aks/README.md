@@ -45,7 +45,7 @@ kubectl get nodes
 
 ## Cost control
 
-The AKS control plane is free. The single node (Standard_B2s) costs ~$30/month at full uptime.
+The AKS control plane is free. The single node (Standard_B2s_v2) costs ~$30/month at full uptime.
 
 Stop the cluster when not in use to avoid charges:
 
@@ -62,9 +62,9 @@ az aks start --resource-group rg-diploma-aks --name aks-diploma
 | `location` | Azure region | `polandcentral` |
 | `resource_group_name` | Name of the AKS resource group | `rg-diploma-aks` |
 | `cluster_name` | Name of the AKS cluster | `aks-diploma` |
-| `node_size` | VM size for the default node pool | `Standard_B2s` |
+| `node_size` | VM size for the default node pool | `Standard_B2s_v2` |
 | `node_count` | Number of nodes in the default node pool | `1` |
-| `kubernetes_version` | Kubernetes version | `1.31` |
+| `kubernetes_version` | Kubernetes version | `1.35.4` |
 
 ## Outputs
 
