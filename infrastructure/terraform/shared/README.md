@@ -29,7 +29,7 @@ After `apply`, other modules in this repository configure the `azurerm` backend 
 | Name | Description | Default |
 |---|---|---|
 | `subscription_id` | Azure subscription ID | — |
-| `location` | Azure region | `westeurope` |
+| `location` | Azure region | `polandcentral` |
 | `resource_group_name` | Name of the shared resource group | `rg-diploma-shared` |
 | `state_storage_account_name` | Globally unique storage account name (3-24 lowercase alphanumeric chars) | — |
 | `state_container_name` | Name of the state blob container | `tfstate` |
