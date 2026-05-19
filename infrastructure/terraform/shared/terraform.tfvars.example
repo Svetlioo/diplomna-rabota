@@ -1,2 +1,0 @@
-subscription_id            = "<your-azure-subscription-id>"
-state_storage_account_name = "<globally-unique-3-24-lowercase-alphanumeric>"
