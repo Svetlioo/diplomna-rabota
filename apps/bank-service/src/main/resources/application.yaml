@@ -42,5 +42,10 @@ security:
     secret: ${JWT_SECRET}
     ttl: ${JWT_TTL:PT12H}
 
+# fraud-detection service base URL. Locally it is the docker-compose container;
+# in Kubernetes the Helm chart sets it to the in-cluster service DNS.
+fraud:
+  url: ${FRAUD_URL:http://localhost:8000}
+
 server:
   port: ${SERVER_PORT:8080}

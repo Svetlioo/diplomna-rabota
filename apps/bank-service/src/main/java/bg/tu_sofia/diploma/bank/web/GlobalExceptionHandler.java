@@ -1,5 +1,6 @@
 package bg.tu_sofia.diploma.bank.web;
 
+import bg.tu_sofia.diploma.bank.exception.AccountFrozenException;
 import bg.tu_sofia.diploma.bank.exception.AccountNotFoundException;
 import bg.tu_sofia.diploma.bank.exception.CurrencyMismatchException;
 import bg.tu_sofia.diploma.bank.exception.EmailAlreadyExistsException;
@@ -23,6 +24,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(AccountNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of("ACCOUNT_NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountFrozenException.class)
+    public ResponseEntity<ErrorResponse> handleFrozen(AccountFrozenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.of("ACCOUNT_FROZEN", ex.getMessage()));
     }
 
     @ExceptionHandler(InsufficientFundsException.class)

@@ -17,5 +17,13 @@ services:
       timeout: 5s
       retries: 10
 
+  fraud-detection:
+    build: ./apps/fraud-detection
+    container_name: fraud-detection
+    environment:
+      FRAUD_AMOUNT_THRESHOLD: ${FRAUD_AMOUNT_THRESHOLD:-10000}
+    ports:
+      - "8000:8000"
+
 volumes:
   bank-db-data:
