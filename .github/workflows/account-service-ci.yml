@@ -192,7 +192,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-        run: cosign attest --yes --registry-referrers-mode=legacy --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+        run: cosign attest --yes --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
 
   provenance:
     name: SLSA provenance
