@@ -171,13 +171,14 @@ jobs:
       - name: Install Cosign
         if: needs.changes.outputs.account == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v2.4.3
 
       - name: Sign image with Cosign (keyless)
         if: needs.changes.outputs.account == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-          COSIGN_REPOSITORY: ""
-        run: cosign sign --yes --registry-referrers-mode=legacy "$IMAGE"
+        run: cosign sign --yes "$IMAGE"
 
       - name: Generate CycloneDX SBOM with Syft
         if: needs.changes.outputs.account == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
