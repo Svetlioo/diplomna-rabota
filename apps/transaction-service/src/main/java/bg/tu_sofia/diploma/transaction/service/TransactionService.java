@@ -5,11 +5,12 @@ import bg.tu_sofia.diploma.transaction.client.AccountClientException;
 import bg.tu_sofia.diploma.transaction.domain.Transaction;
 import bg.tu_sofia.diploma.transaction.domain.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -51,7 +52,12 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public List<Transaction> getByAccount(UUID accountId) {
-        return transactionRepository.findByFromAccountIdOrToAccountIdOrderByCreatedAtDesc(accountId, accountId);
+    public Page<Transaction> getByAccount(UUID accountId, Pageable pageable) {
+        return transactionRepository.findByFromAccountIdOrToAccountId(accountId, accountId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Transaction> getAll(Pageable pageable) {
+        return transactionRepository.findAll(pageable);
     }
 }

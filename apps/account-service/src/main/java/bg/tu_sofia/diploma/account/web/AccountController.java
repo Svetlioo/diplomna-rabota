@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,6 +32,13 @@ public class AccountController {
         return AccountResponse.from(
                 accountService.createAccount(request.ownerName(), request.initialBalance(), request.currency())
         );
+    }
+
+    @GetMapping
+    public List<AccountResponse> list() {
+        return accountService.getAccounts().stream()
+                .map(AccountResponse::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
