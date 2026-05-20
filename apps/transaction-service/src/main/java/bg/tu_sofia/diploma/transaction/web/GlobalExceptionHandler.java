@@ -1,6 +1,6 @@
 package bg.tu_sofia.diploma.transaction.web;
 
-import bg.tu_sofia.diploma.transaction.service.TransactionNotFoundException;
+import bg.tu_sofia.diploma.transaction.exception.TransactionNotFoundException;
 import bg.tu_sofia.diploma.transaction.web.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
