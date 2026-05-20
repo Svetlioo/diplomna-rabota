@@ -1,16 +1,17 @@
 package bg.tu_sofia.diploma.transaction.client;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * Thin REST client over account-service. Translates account-service HTTP error
- * statuses into a single {@link AccountClientException} carrying a readable
- * reason, so the orchestration logic stays clean.
+ * Thin REST client over account-service. The whole money movement is delegated
+ * to account-service's atomic /transfers endpoint; on failure the reason
+ * account-service reported (e.g. "Insufficient funds") is surfaced as an
+ * {@link AccountClientException} so it can be recorded on the transaction.
  */
 @Component
 public class AccountClient {
@@ -21,35 +22,33 @@ public class AccountClient {
         this.restClient = accountRestClient;
     }
 
-    public void withdraw(UUID accountId, BigDecimal amount) {
-        post("/accounts/" + accountId + "/withdraw", amount);
-    }
-
-    public void deposit(UUID accountId, BigDecimal amount) {
-        post("/accounts/" + accountId + "/deposit", amount);
-    }
-
-    private void post(String path, BigDecimal amount) {
-        restClient.post()
-                .uri(path)
-                .body(new AmountRequest(amount))
-                .retrieve()
-                .onStatus(status -> status.isError(), (request, response) -> {
-                    throw new AccountClientException(reasonFor(HttpStatus.resolve(response.getStatusCode().value())));
-                })
-                .toBodilessEntity();
-    }
-
-    private String reasonFor(HttpStatus status) {
-        if (status == HttpStatus.NOT_FOUND) {
-            return "account not found";
+    public void transfer(UUID from, UUID to, BigDecimal amount, String currency) {
+        try {
+            restClient.post()
+                    .uri("/transfers")
+                    .body(new TransferRequest(from, to, amount, currency))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new AccountClientException(reasonFrom(e));
         }
-        if (status == HttpStatus.UNPROCESSABLE_ENTITY) {
-            return "insufficient funds";
-        }
-        return "account-service error";
     }
 
-    private record AmountRequest(BigDecimal amount) {
+    private String reasonFrom(RestClientResponseException e) {
+        try {
+            ErrorBody body = e.getResponseBodyAs(ErrorBody.class);
+            if (body != null && body.message() != null && !body.message().isBlank()) {
+                return body.message();
+            }
+        } catch (Exception ignored) {
+            // Fall through to a generic, status-based reason.
+        }
+        return "account-service error (" + e.getStatusCode().value() + ")";
+    }
+
+    private record TransferRequest(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency) {
+    }
+
+    private record ErrorBody(String error, String message) {
     }
 }
