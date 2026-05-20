@@ -30,6 +30,12 @@ spring:
 
 # Base URL of account-service. Locally defaults to the host port account-service
 # listens on; in Kubernetes the Helm chart sets it to the in-cluster service DNS.
+security:
+  jwt:
+    # Same HS256 secret as account-service: this service only validates tokens
+    # account-service issued, it never mints them.
+    secret: ${JWT_SECRET}
+
 account-service:
   url: ${ACCOUNT_SERVICE_URL:http://localhost:8080}
 
