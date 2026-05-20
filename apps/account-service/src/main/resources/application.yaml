@@ -1,13 +1,17 @@
 spring:
   application:
     name: account-service
-  # Local-dev convenience: load env vars from the monorepo root .env file
-  # when running from apps/account-service/. The `optional:` prefix means
-  # this is silently skipped if the file is absent — which is the case in
-  # CI and production, where DB_URL/USERNAME/PASSWORD are injected by the
-  # runtime (GitHub Actions secrets, Kubernetes secrets).
+  # Local-dev convenience: load env vars from the monorepo root .env file.
+  # Searched at several levels up so it resolves regardless of the working
+  # directory (service dir, apps/, or repo root — terminal or IDE). The
+  # `optional:` prefix means each path is silently skipped if absent — which
+  # is the case in CI and production, where DB_URL/USERNAME/PASSWORD are
+  # injected by the runtime (GitHub Actions secrets, Kubernetes secrets).
   config:
-    import: "optional:file:../../.env[.properties]"
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+      - "optional:file:../../.env[.properties]"
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
