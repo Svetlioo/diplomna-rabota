@@ -25,6 +25,16 @@ spring:
     # @Transactional methods. Forces explicit DTO mapping (no lazy loads
     # leaking into the JSON layer) and frees DB connections sooner.
     open-in-view: false
+  flyway:
+    # Defaults to true (Flyway clean is blocked). Local dev sets it to false via
+    # .env so the dev-only clean-on-start strategy can wipe the schema.
+    clean-disabled: ${FLYWAY_CLEAN_DISABLED:true}
+
+# Local-dev only: wipe + re-migrate on startup (see FlywayDevConfig). Off by
+# default; turned on via .env. Never set this in Kubernetes — it drops all data.
+app:
+  db:
+    clean-on-start: ${APP_DB_CLEAN_ON_START:false}
 
 security:
   jwt:
