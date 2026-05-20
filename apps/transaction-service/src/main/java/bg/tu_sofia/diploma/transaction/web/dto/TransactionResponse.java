@@ -2,6 +2,7 @@ package bg.tu_sofia.diploma.transaction.web.dto;
 
 import bg.tu_sofia.diploma.transaction.domain.Transaction;
 import bg.tu_sofia.diploma.transaction.domain.TransactionStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -14,6 +15,7 @@ public record TransactionResponse(
         BigDecimal amount,
         String currency,
         TransactionStatus status,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         String failureReason,
         Instant createdAt
 ) {
