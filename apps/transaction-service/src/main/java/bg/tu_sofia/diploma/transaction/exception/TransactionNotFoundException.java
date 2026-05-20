@@ -1,4 +1,4 @@
-package bg.tu_sofia.diploma.transaction.service;
+package bg.tu_sofia.diploma.transaction.exception;
 
 import java.util.UUID;
 

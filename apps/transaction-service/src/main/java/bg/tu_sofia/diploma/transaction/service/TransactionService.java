@@ -4,6 +4,7 @@ import bg.tu_sofia.diploma.transaction.client.AccountClient;
 import bg.tu_sofia.diploma.transaction.client.AccountClientException;
 import bg.tu_sofia.diploma.transaction.domain.Transaction;
 import bg.tu_sofia.diploma.transaction.domain.TransactionRepository;
+import bg.tu_sofia.diploma.transaction.exception.TransactionNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

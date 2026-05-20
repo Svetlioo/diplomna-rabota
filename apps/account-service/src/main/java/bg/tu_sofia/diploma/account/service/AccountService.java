@@ -2,6 +2,10 @@ package bg.tu_sofia.diploma.account.service;
 
 import bg.tu_sofia.diploma.account.domain.Account;
 import bg.tu_sofia.diploma.account.domain.AccountRepository;
+import bg.tu_sofia.diploma.account.exception.AccountNotFoundException;
+import bg.tu_sofia.diploma.account.exception.CurrencyMismatchException;
+import bg.tu_sofia.diploma.account.exception.InsufficientFundsException;
+import bg.tu_sofia.diploma.account.exception.SameAccountTransferException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,15 +21,12 @@ public class AccountService {
     private final IbanGenerator ibanGenerator;
 
     /**
-     * Opens the calling user's single account. The owner is taken from the
-     * authenticated identity, never from the request, so a user can only ever
-     * create an account for themselves. A second attempt is rejected.
+     * Opens a user's single account at registration time. The owner is the newly
+     * registered user, so a user always has exactly one account; the one-per-user
+     * invariant is guaranteed by the UNIQUE constraint on accounts.owner_id.
      */
     @Transactional
     public Account openForOwner(UUID ownerId) {
-        if (accountRepository.existsByOwnerId(ownerId)) {
-            throw new AccountAlreadyExistsException();
-        }
         return accountRepository.save(Account.open(ownerId, uniqueIban()));
     }
 

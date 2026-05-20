@@ -1,4 +1,4 @@
-package bg.tu_sofia.diploma.account.service;
+package bg.tu_sofia.diploma.account.exception;
 
 public class SameAccountTransferException extends RuntimeException {
 

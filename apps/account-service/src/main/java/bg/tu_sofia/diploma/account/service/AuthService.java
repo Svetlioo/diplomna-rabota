@@ -2,6 +2,8 @@ package bg.tu_sofia.diploma.account.service;
 
 import bg.tu_sofia.diploma.account.domain.User;
 import bg.tu_sofia.diploma.account.domain.UserRepository;
+import bg.tu_sofia.diploma.account.exception.EmailAlreadyExistsException;
+import bg.tu_sofia.diploma.account.exception.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,18 +23,25 @@ import java.time.Instant;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final AccountService accountService;
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
 
     @Value("${security.jwt.ttl:PT12H}")
     private Duration tokenTtl;
 
+    /**
+     * Registers a user and opens their single account in the same transaction,
+     * so a registered user always has exactly one account and there is no
+     * separate "create account" step. Either both are persisted or neither is.
+     */
     @Transactional
     public String register(String email, String rawPassword) {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException(email);
         }
         User user = userRepository.save(User.create(email, passwordEncoder.encode(rawPassword)));
+        accountService.openForOwner(user.getId());
         return issueToken(user);
     }
 
