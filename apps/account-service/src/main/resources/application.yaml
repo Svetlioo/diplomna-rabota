@@ -26,5 +26,11 @@ spring:
     # leaking into the JSON layer) and frees DB connections sooner.
     open-in-view: false
 
+security:
+  jwt:
+    # Shared HS256 secret, also used by transaction-service to validate tokens.
+    secret: ${JWT_SECRET}
+    ttl: ${JWT_TTL:PT12H}
+
 server:
   port: ${SERVER_PORT:8080}

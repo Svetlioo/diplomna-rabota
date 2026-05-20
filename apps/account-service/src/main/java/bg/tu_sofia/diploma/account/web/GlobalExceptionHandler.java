@@ -2,7 +2,9 @@ package bg.tu_sofia.diploma.account.web;
 
 import bg.tu_sofia.diploma.account.service.AccountNotFoundException;
 import bg.tu_sofia.diploma.account.service.CurrencyMismatchException;
+import bg.tu_sofia.diploma.account.service.EmailAlreadyExistsException;
 import bg.tu_sofia.diploma.account.service.InsufficientFundsException;
+import bg.tu_sofia.diploma.account.service.InvalidCredentialsException;
 import bg.tu_sofia.diploma.account.service.SameAccountTransferException;
 import bg.tu_sofia.diploma.account.web.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -38,6 +40,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleCurrencyMismatch(CurrencyMismatchException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ErrorResponse.of("CURRENCY_MISMATCH", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailExists(EmailAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("EMAIL_ALREADY_EXISTS", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of("INVALID_CREDENTIALS", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
