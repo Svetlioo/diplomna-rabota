@@ -1,7 +1,7 @@
 package bg.tu_sofia.diploma.bank.web;
 
 import bg.tu_sofia.diploma.bank.domain.Transaction;
-import bg.tu_sofia.diploma.bank.service.FraudScreeningService;
+import bg.tu_sofia.diploma.bank.service.PaymentService;
 import bg.tu_sofia.diploma.bank.service.TransactionService;
 import bg.tu_sofia.diploma.bank.web.dto.CreateTransferRequest;
 import bg.tu_sofia.diploma.bank.web.dto.TransactionResponse;
@@ -30,17 +30,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionController {
 
+    private final PaymentService paymentService;
     private final TransactionService transactionService;
-    private final FraudScreeningService fraudScreeningService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TransactionResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTransferRequest request) {
-        UUID ownerId = callerId(jwt);
-        // Screen before executing: a flagged transfer is blocked (and the account
-        // frozen), so the money never moves.
-        fraudScreeningService.check(ownerId, request.toIban(), request.amount());
-        Transaction tx = transactionService.transfer(ownerId, request.toIban(), request.amount());
+        Transaction tx = paymentService.pay(callerId(jwt), request.toIban(), request.amount());
         return TransactionResponse.from(tx);
     }
 
