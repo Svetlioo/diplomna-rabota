@@ -3,10 +3,12 @@ package bg.tu_sofia.diploma.account.service;
 import bg.tu_sofia.diploma.account.domain.Account;
 import bg.tu_sofia.diploma.account.domain.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,6 +27,11 @@ public class AccountService {
     public Account getAccount(UUID id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Account> getAccounts() {
+        return accountRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @Transactional
