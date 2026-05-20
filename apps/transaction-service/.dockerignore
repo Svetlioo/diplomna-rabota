@@ -1,0 +1,13 @@
+target/classes/
+target/generated-sources/
+target/maven-status/
+target/test-classes/
+.idea/
+.vscode/
+*.iml
+.git/
+.gitignore
+.env
+.env.*
+*.md
+HELP.md

@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: transaction-service
+  # Local-dev convenience: load env vars from the monorepo root .env file
+  # when running from apps/transaction-service/. The `optional:` prefix means
+  # this is silently skipped if the file is absent — which is the case in
+  # CI and production, where DB_URL/USERNAME/PASSWORD are injected by the
+  # runtime (GitHub Actions secrets, Kubernetes secrets).
+  config:
+    import: "optional:file:../../.env[.properties]"
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    # Do not modify schema; Flyway owns it. Validate ensures entities match
+    # the migrated schema at startup, failing fast on drift.
+    hibernate:
+      ddl-auto: validate
+    # Keep the Hibernate session bounded to @Transactional methods.
+    open-in-view: false
+
+# Base URL of account-service. In Kubernetes this resolves to the in-cluster
+# service DNS name; locally it points at a port-forwarded instance.
+account-service:
+  url: ${ACCOUNT_SERVICE_URL:http://localhost:8081}
+
+server:
+  port: ${SERVER_PORT:8080}
