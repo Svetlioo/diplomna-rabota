@@ -2,6 +2,7 @@ package bg.tu_sofia.diploma.bank.service;
 
 import bg.tu_sofia.diploma.bank.domain.Account;
 import bg.tu_sofia.diploma.bank.domain.AccountRepository;
+import bg.tu_sofia.diploma.bank.exception.AccountFrozenException;
 import bg.tu_sofia.diploma.bank.exception.AccountNotFoundException;
 import bg.tu_sofia.diploma.bank.exception.CurrencyMismatchException;
 import bg.tu_sofia.diploma.bank.exception.InsufficientFundsException;
@@ -44,8 +45,16 @@ public class AccountService {
     }
 
     @Transactional
+    public void freeze(UUID ownerId) {
+        accountRepository.findByOwnerId(ownerId).ifPresent(Account::freeze);
+    }
+
+    @Transactional
     public Account withdraw(UUID ownerId, BigDecimal amount) {
         Account account = lockOwnAccount(ownerId);
+        if (account.isFrozen()) {
+            throw new AccountFrozenException();
+        }
         try {
             account.withdraw(amount);
         } catch (IllegalStateException e) {
@@ -85,6 +94,9 @@ public class AccountService {
         Account from = fromFirst ? first : second;
         Account to = fromFirst ? second : first;
 
+        if (from.isFrozen()) {
+            throw new AccountFrozenException();
+        }
         if (!from.getCurrency().equals(to.getCurrency())) {
             throw new CurrencyMismatchException();
         }

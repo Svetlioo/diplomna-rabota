@@ -40,6 +40,9 @@ public class Account {
     @Column(nullable = false, length = 3)
     private String currency;
 
+    @Column(nullable = false)
+    private boolean frozen;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -60,6 +63,10 @@ public class Account {
         account.balance = BigDecimal.ZERO;
         account.currency = "EUR";
         return account;
+    }
+
+    public void freeze() {
+        this.frozen = true;
     }
 
     public void deposit(BigDecimal amount) {

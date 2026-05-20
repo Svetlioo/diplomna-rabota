@@ -11,6 +11,7 @@ CREATE TABLE accounts (
     iban        VARCHAR(34)              NOT NULL UNIQUE,
     balance     NUMERIC(19, 2)           NOT NULL,
     currency    VARCHAR(3)               NOT NULL,
+    frozen      BOOLEAN                  NOT NULL DEFAULT FALSE,
     version     BIGINT                   NOT NULL DEFAULT 0,
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
