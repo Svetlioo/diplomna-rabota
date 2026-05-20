@@ -7,6 +7,7 @@ import bg.tu_sofia.diploma.bank.exception.EmailAlreadyExistsException;
 import bg.tu_sofia.diploma.bank.exception.InsufficientFundsException;
 import bg.tu_sofia.diploma.bank.exception.InvalidCredentialsException;
 import bg.tu_sofia.diploma.bank.exception.SameAccountTransferException;
+import bg.tu_sofia.diploma.bank.exception.SuspiciousTransferException;
 import bg.tu_sofia.diploma.bank.exception.TransactionNotFoundException;
 import bg.tu_sofia.diploma.bank.web.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleFrozen(AccountFrozenException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ErrorResponse.of("ACCOUNT_FROZEN", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SuspiciousTransferException.class)
+    public ResponseEntity<ErrorResponse> handleSuspicious(SuspiciousTransferException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.of("SUSPICIOUS_TRANSFER", ex.getMessage()));
     }
 
     @ExceptionHandler(InsufficientFundsException.class)

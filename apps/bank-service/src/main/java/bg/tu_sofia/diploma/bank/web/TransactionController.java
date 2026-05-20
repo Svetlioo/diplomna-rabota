@@ -37,9 +37,10 @@ public class TransactionController {
     @ResponseStatus(HttpStatus.CREATED)
     public TransactionResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTransferRequest request) {
         UUID ownerId = callerId(jwt);
+        // Screen before executing: a flagged transfer is blocked (and the account
+        // frozen), so the money never moves.
+        fraudScreeningService.check(ownerId, request.toIban(), request.amount());
         Transaction tx = transactionService.transfer(ownerId, request.toIban(), request.amount());
-        // After the transfer has committed, screen it; a flagged transfer freezes the account.
-        fraudScreeningService.screen(ownerId, request.toIban(), request.amount());
         return TransactionResponse.from(tx);
     }
 
