@@ -28,8 +28,11 @@ public class Account {
     @Column(nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "owner_name", nullable = false)
-    private String ownerName;
+    @Column(name = "owner_id", nullable = false, updatable = false, unique = true)
+    private UUID ownerId;
+
+    @Column(nullable = false, updatable = false, unique = true)
+    private String iban;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
@@ -49,12 +52,13 @@ public class Account {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public static Account open(String ownerName, BigDecimal initialBalance, String currency) {
+    public static Account open(UUID ownerId, String iban) {
         Account account = new Account();
         account.id = UUID.randomUUID();
-        account.ownerName = ownerName;
-        account.balance = initialBalance;
-        account.currency = currency;
+        account.ownerId = ownerId;
+        account.iban = iban;
+        account.balance = BigDecimal.ZERO;
+        account.currency = "EUR";
         return account;
     }
 

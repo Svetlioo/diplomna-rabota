@@ -1,6 +1,5 @@
 package bg.tu_sofia.diploma.transaction.web;
 
-import bg.tu_sofia.diploma.transaction.service.SameAccountTransferException;
 import bg.tu_sofia.diploma.transaction.service.TransactionNotFoundException;
 import bg.tu_sofia.diploma.transaction.web.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -18,12 +17,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(TransactionNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of("TRANSACTION_NOT_FOUND", ex.getMessage()));
-    }
-
-    @ExceptionHandler(SameAccountTransferException.class)
-    public ResponseEntity<ErrorResponse> handleSameAccount(SameAccountTransferException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ErrorResponse.of("SAME_ACCOUNT_TRANSFER", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

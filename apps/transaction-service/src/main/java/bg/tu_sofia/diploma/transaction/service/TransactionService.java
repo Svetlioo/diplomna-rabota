@@ -17,47 +17,37 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionService {
 
+    private static final String CURRENCY = "EUR";
+
     private final TransactionRepository transactionRepository;
     private final AccountClient accountClient;
 
     /**
-     * Records a transfer between two accounts. The money movement itself is one
-     * atomic operation inside account-service (/transfers), which debits the
-     * source and credits the target in a single locked database transaction.
-     * This service is the business entrypoint and ledger: it asks account-service
-     * to perform the transfer and persists the outcome — COMPLETED, or FAILED
-     * with the reason account-service reported (e.g. insufficient funds). Because
-     * the transfer is atomic on account-service's side, it either fully happened
-     * or not at all, so there is no compensation to run here.
+     * Records a transfer initiated by {@code ownerId} to {@code toIban}. The money
+     * movement itself is one atomic operation inside account-service (/transfers),
+     * which resolves the source from the relayed token and debits + credits in a
+     * single locked database transaction. This service is the business entrypoint
+     * and ledger: it asks account-service to perform the transfer and persists the
+     * outcome — COMPLETED, or FAILED with the reason account-service reported.
      */
-    public Transaction transfer(UUID from, UUID to, BigDecimal amount, String currency) {
-        if (from.equals(to)) {
-            throw new SameAccountTransferException();
-        }
-
+    public Transaction transfer(UUID ownerId, String toIban, BigDecimal amount) {
         try {
-            accountClient.transfer(from, to, amount, currency);
+            accountClient.transfer(toIban, amount);
         } catch (AccountClientException e) {
             return transactionRepository.save(
-                    Transaction.failed(from, to, amount, currency, e.getMessage()));
+                    Transaction.failed(ownerId, toIban, amount, CURRENCY, e.getMessage()));
         }
-
-        return transactionRepository.save(Transaction.completed(from, to, amount, currency));
+        return transactionRepository.save(Transaction.completed(ownerId, toIban, amount, CURRENCY));
     }
 
     @Transactional(readOnly = true)
-    public Transaction getTransaction(UUID id) {
-        return transactionRepository.findById(id)
+    public Transaction getOwnTransaction(UUID id, UUID ownerId) {
+        return transactionRepository.findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new TransactionNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<Transaction> getByAccount(UUID accountId, Pageable pageable) {
-        return transactionRepository.findByFromAccountIdOrToAccountId(accountId, accountId, pageable);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<Transaction> getAll(Pageable pageable) {
-        return transactionRepository.findAll(pageable);
+    public Page<Transaction> getOwnTransactions(UUID ownerId, Pageable pageable) {
+        return transactionRepository.findByOwnerId(ownerId, pageable);
     }
 }

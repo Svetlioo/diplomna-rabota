@@ -11,10 +11,18 @@ import java.util.UUID;
 
 public interface AccountRepository extends JpaRepository<Account, UUID> {
 
+    boolean existsByOwnerId(UUID ownerId);
+
+    boolean existsByIban(String iban);
+
+    Optional<Account> findByOwnerId(UUID ownerId);
+
+    Optional<Account> findByIban(String iban);
+
     /**
-     * Loads the account with a row-level write lock (SELECT ... FOR UPDATE),
-     * blocking any concurrent transaction from reading-for-update or writing
-     * the same row until this transaction commits.
+     * Loads an account by id with a row-level write lock (SELECT ... FOR UPDATE),
+     * blocking any concurrent transaction from reading-for-update or writing the
+     * same row until this transaction commits.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.id = :id")

@@ -10,8 +10,8 @@ import java.util.UUID;
 
 public record TransactionResponse(
         UUID id,
-        UUID fromAccountId,
-        UUID toAccountId,
+        UUID ownerId,
+        String toIban,
         BigDecimal amount,
         String currency,
         TransactionStatus status,
@@ -23,8 +23,8 @@ public record TransactionResponse(
     public static TransactionResponse from(Transaction tx) {
         return new TransactionResponse(
                 tx.getId(),
-                tx.getFromAccountId(),
-                tx.getToAccountId(),
+                tx.getOwnerId(),
+                tx.getToIban(),
                 tx.getAmount(),
                 tx.getCurrency(),
                 tx.getStatus(),
