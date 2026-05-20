@@ -8,7 +8,8 @@ import java.util.UUID;
 
 public record AccountResponse(
         UUID id,
-        String ownerName,
+        UUID ownerId,
+        String iban,
         BigDecimal balance,
         String currency,
         Instant createdAt,
@@ -18,7 +19,8 @@ public record AccountResponse(
     public static AccountResponse from(Account account) {
         return new AccountResponse(
                 account.getId(),
-                account.getOwnerName(),
+                account.getOwnerId(),
+                account.getIban(),
                 account.getBalance(),
                 account.getCurrency(),
                 account.getCreatedAt(),

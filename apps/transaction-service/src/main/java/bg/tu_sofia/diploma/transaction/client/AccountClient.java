@@ -5,13 +5,14 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 /**
  * Thin REST client over account-service. The whole money movement is delegated
  * to account-service's atomic /transfers endpoint; on failure the reason
  * account-service reported (e.g. "Insufficient funds") is surfaced as an
  * {@link AccountClientException} so it can be recorded on the transaction.
+ * The source account is derived by account-service from the relayed Bearer
+ * token, so only the destination IBAN and amount are sent.
  */
 @Component
 public class AccountClient {
@@ -22,11 +23,11 @@ public class AccountClient {
         this.restClient = accountRestClient;
     }
 
-    public void transfer(UUID from, UUID to, BigDecimal amount, String currency) {
+    public void transfer(String toIban, BigDecimal amount) {
         try {
             restClient.post()
                     .uri("/transfers")
-                    .body(new TransferRequest(from, to, amount, currency))
+                    .body(new TransferRequest(toIban, amount))
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientResponseException e) {
@@ -46,7 +47,7 @@ public class AccountClient {
         return "account-service error (" + e.getStatusCode().value() + ")";
     }
 
-    private record TransferRequest(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency) {
+    private record TransferRequest(String toIban, BigDecimal amount) {
     }
 
     private record ErrorBody(String error, String message) {

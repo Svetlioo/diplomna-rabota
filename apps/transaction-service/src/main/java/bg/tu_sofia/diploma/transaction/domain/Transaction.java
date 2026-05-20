@@ -28,11 +28,11 @@ public class Transaction {
     @Column(nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "from_account_id", nullable = false, updatable = false)
-    private UUID fromAccountId;
+    @Column(name = "owner_id", nullable = false, updatable = false)
+    private UUID ownerId;
 
-    @Column(name = "to_account_id", nullable = false, updatable = false)
-    private UUID toAccountId;
+    @Column(name = "to_iban", nullable = false, updatable = false)
+    private String toIban;
 
     @Column(nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal amount;
@@ -51,22 +51,22 @@ public class Transaction {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    private Transaction(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency) {
+    private Transaction(UUID ownerId, String toIban, BigDecimal amount, String currency) {
         this.id = UUID.randomUUID();
-        this.fromAccountId = fromAccountId;
-        this.toAccountId = toAccountId;
+        this.ownerId = ownerId;
+        this.toIban = toIban;
         this.amount = amount;
         this.currency = currency;
     }
 
-    public static Transaction completed(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency) {
-        Transaction tx = new Transaction(fromAccountId, toAccountId, amount, currency);
+    public static Transaction completed(UUID ownerId, String toIban, BigDecimal amount, String currency) {
+        Transaction tx = new Transaction(ownerId, toIban, amount, currency);
         tx.status = TransactionStatus.COMPLETED;
         return tx;
     }
 
-    public static Transaction failed(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency, String reason) {
-        Transaction tx = new Transaction(fromAccountId, toAccountId, amount, currency);
+    public static Transaction failed(UUID ownerId, String toIban, BigDecimal amount, String currency, String reason) {
+        Transaction tx = new Transaction(ownerId, toIban, amount, currency);
         tx.status = TransactionStatus.FAILED;
         tx.failureReason = reason;
         return tx;

@@ -12,12 +12,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,25 +33,25 @@ public class TransactionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TransactionResponse create(@Valid @RequestBody CreateTransferRequest request) {
+    public TransactionResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTransferRequest request) {
         return TransactionResponse.from(
-                transactionService.transfer(
-                        request.fromAccountId(), request.toAccountId(), request.amount(), request.currency())
-        );
+                transactionService.transfer(callerId(jwt), request.toIban(), request.amount()));
     }
 
     @GetMapping("/{id}")
-    public TransactionResponse get(@PathVariable UUID id) {
-        return TransactionResponse.from(transactionService.getTransaction(id));
+    public TransactionResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return TransactionResponse.from(transactionService.getOwnTransaction(id, callerId(jwt)));
     }
 
     @GetMapping
     public PagedModel<TransactionResponse> list(
-            @RequestParam(required = false) UUID accountId,
+            @AuthenticationPrincipal Jwt jwt,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<Transaction> page = accountId == null
-                ? transactionService.getAll(pageable)
-                : transactionService.getByAccount(accountId, pageable);
+        Page<Transaction> page = transactionService.getOwnTransactions(callerId(jwt), pageable);
         return new PagedModel<>(page.map(TransactionResponse::from));
+    }
+
+    private static UUID callerId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }

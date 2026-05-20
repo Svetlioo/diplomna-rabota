@@ -3,12 +3,10 @@ package bg.tu_sofia.diploma.account.service;
 import bg.tu_sofia.diploma.account.domain.Account;
 import bg.tu_sofia.diploma.account.domain.AccountRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -16,36 +14,37 @@ import java.util.UUID;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final IbanGenerator ibanGenerator;
 
+    /**
+     * Opens the calling user's single account. The owner is taken from the
+     * authenticated identity, never from the request, so a user can only ever
+     * create an account for themselves. A second attempt is rejected.
+     */
     @Transactional
-    public Account createAccount(String ownerName, BigDecimal initialBalance, String currency) {
-        Account account = Account.open(ownerName, initialBalance, currency);
-        return accountRepository.save(account);
+    public Account openForOwner(UUID ownerId) {
+        if (accountRepository.existsByOwnerId(ownerId)) {
+            throw new AccountAlreadyExistsException();
+        }
+        return accountRepository.save(Account.open(ownerId, uniqueIban()));
     }
 
     @Transactional(readOnly = true)
-    public Account getAccount(UUID id) {
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new AccountNotFoundException(id));
-    }
-
-    @Transactional(readOnly = true)
-    public List<Account> getAccounts() {
-        return accountRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Account getOwnAccount(UUID ownerId) {
+        return accountRepository.findByOwnerId(ownerId)
+                .orElseThrow(AccountNotFoundException::forOwner);
     }
 
     @Transactional
-    public Account deposit(UUID id, BigDecimal amount) {
-        Account account = accountRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new AccountNotFoundException(id));
+    public Account deposit(UUID ownerId, BigDecimal amount) {
+        Account account = lockOwnAccount(ownerId);
         account.deposit(amount);
         return accountRepository.save(account);
     }
 
     @Transactional
-    public Account withdraw(UUID id, BigDecimal amount) {
-        Account account = accountRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new AccountNotFoundException(id));
+    public Account withdraw(UUID ownerId, BigDecimal amount) {
+        Account account = lockOwnAccount(ownerId);
         try {
             account.withdraw(amount);
         } catch (IllegalStateException e) {
@@ -55,15 +54,21 @@ public class AccountService {
     }
 
     /**
-     * Moves money between two accounts atomically. Both rows are locked with
-     * SELECT ... FOR UPDATE and the debit + credit happen in one transaction, so
-     * either both sides change or neither does — there is no in-flight state and
-     * no compensation to run. Locks are always acquired in id order, so two
-     * concurrent transfers over the same pair (A→B and B→A) can never deadlock by
-     * grabbing the rows in opposite order.
+     * Moves money from the caller's account to the account with {@code toIban}.
+     * The source is always the caller's own account (resolved from the
+     * authenticated identity), so a user can never debit someone else's account.
+     * Both rows are locked with SELECT ... FOR UPDATE in id order and the debit +
+     * credit happen in one transaction, so either both sides change or neither
+     * does, and two concurrent transfers over the same pair cannot deadlock.
      */
     @Transactional
-    public void transfer(UUID fromId, UUID toId, BigDecimal amount, String currency) {
+    public void transfer(UUID ownerId, String toIban, BigDecimal amount) {
+        UUID fromId = accountRepository.findByOwnerId(ownerId)
+                .orElseThrow(AccountNotFoundException::forOwner)
+                .getId();
+        UUID toId = accountRepository.findByIban(toIban)
+                .orElseThrow(() -> AccountNotFoundException.forIban(toIban))
+                .getId();
         if (fromId.equals(toId)) {
             throw new SameAccountTransferException();
         }
@@ -79,7 +84,7 @@ public class AccountService {
         Account from = fromFirst ? first : second;
         Account to = fromFirst ? second : first;
 
-        if (!from.getCurrency().equals(currency) || !to.getCurrency().equals(currency)) {
+        if (!from.getCurrency().equals(to.getCurrency())) {
             throw new CurrencyMismatchException();
         }
 
@@ -92,5 +97,21 @@ public class AccountService {
 
         accountRepository.save(from);
         accountRepository.save(to);
+    }
+
+    private Account lockOwnAccount(UUID ownerId) {
+        UUID id = accountRepository.findByOwnerId(ownerId)
+                .orElseThrow(AccountNotFoundException::forOwner)
+                .getId();
+        return accountRepository.findByIdForUpdate(id)
+                .orElseThrow(AccountNotFoundException::forOwner);
+    }
+
+    private String uniqueIban() {
+        String iban;
+        do {
+            iban = ibanGenerator.generate();
+        } while (accountRepository.existsByIban(iban));
+        return iban;
     }
 }

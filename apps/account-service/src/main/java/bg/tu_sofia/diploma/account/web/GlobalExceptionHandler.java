@@ -1,5 +1,6 @@
 package bg.tu_sofia.diploma.account.web;
 
+import bg.tu_sofia.diploma.account.service.AccountAlreadyExistsException;
 import bg.tu_sofia.diploma.account.service.AccountNotFoundException;
 import bg.tu_sofia.diploma.account.service.CurrencyMismatchException;
 import bg.tu_sofia.diploma.account.service.EmailAlreadyExistsException;
@@ -22,6 +23,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(AccountNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of("ACCOUNT_NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleAccountExists(AccountAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("ACCOUNT_ALREADY_EXISTS", ex.getMessage()));
     }
 
     @ExceptionHandler(InsufficientFundsException.class)
