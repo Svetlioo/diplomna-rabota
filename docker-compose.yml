@@ -1,33 +1,16 @@
 services:
 
-  account-db:
+  bank-db:
     image: postgres:17.2-alpine
-    container_name: account-db
+    container_name: bank-db
     environment:
-      POSTGRES_USER: ${ACCOUNT_DB_USER}
-      POSTGRES_PASSWORD: ${ACCOUNT_DB_PASSWORD}
-      POSTGRES_DB: ${ACCOUNT_DB_NAME}
+      POSTGRES_USER: ${BANK_DB_USER}
+      POSTGRES_PASSWORD: ${BANK_DB_PASSWORD}
+      POSTGRES_DB: ${BANK_DB_NAME}
     ports:
-      - "${ACCOUNT_DB_PORT}:5432"
+      - "${BANK_DB_PORT}:5432"
     volumes:
-      - account-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  transaction-db:
-    image: postgres:17.2-alpine
-    container_name: transaction-db
-    environment:
-      POSTGRES_USER: ${TRANSACTION_DB_USER}
-      POSTGRES_PASSWORD: ${TRANSACTION_DB_PASSWORD}
-      POSTGRES_DB: ${TRANSACTION_DB_NAME}
-    ports:
-      - "${TRANSACTION_DB_PORT}:5432"
-    volumes:
-      - transaction-db-data:/var/lib/postgresql/data
+      - bank-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -35,5 +18,4 @@ services:
       retries: 10
 
 volumes:
-  account-db-data:
-  transaction-db-data:
+  bank-db-data:
