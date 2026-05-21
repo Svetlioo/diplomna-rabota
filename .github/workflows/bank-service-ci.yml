@@ -89,6 +89,7 @@ jobs:
     outputs:
       image: ghcr.io/svetlioo/bank-service
       digest: ${{ steps.push.outputs.digest }}
+      tag: ${{ steps.ver.outputs.tag }}
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -201,6 +202,37 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
         run: cosign attest --yes --new-bundle-format=false --use-signing-config=false --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+
+  deploy-dev:
+    name: Deploy to dev (gitops)
+    runs-on: ubuntu-latest
+    needs: [changes, image]
+    if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout gitops repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: Svetlioo/diplomna-rabota-gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+
+      - name: Open & auto-merge dev deploy PR
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+          TAG: ${{ needs.image.outputs.tag }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+          BRANCH: deploy/bank-dev-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-bank.yaml
+          git add environments/dev/values-bank.yaml
+          git commit -m "deploy(dev): bank-service ${TAG}"
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "deploy(dev): bank-service ${TAG}" \
+            --body "Automated dev deploy from bank-service CI run ${{ github.run_id }}."
+          gh pr merge "$BRANCH" --squash --delete-branch --admin
 
   provenance:
     name: SLSA provenance
