@@ -215,21 +215,24 @@ jobs:
           repository: Svetlioo/diplomna-rabota-gitops
           token: ${{ secrets.GITOPS_TOKEN }}
 
-      - name: Bump dev image to new tag + digest
+      - name: Open & auto-merge dev deploy PR
         env:
+          GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
           TAG: ${{ needs.image.outputs.tag }}
           DIGEST: ${{ needs.image.outputs.digest }}
-        run: yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-bank.yaml
-
-      - name: Commit & push
-        env:
-          TAG: ${{ needs.image.outputs.tag }}
+          BRANCH: deploy/bank-dev-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-bank.yaml
           git add environments/dev/values-bank.yaml
           git commit -m "chore(dev): deploy bank-service ${TAG}"
-          git push
+          git push -u origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore(dev): deploy bank-service ${TAG}" \
+            --body "Automated dev deploy from bank-service CI run ${{ github.run_id }}."
+          gh pr merge "$BRANCH" --squash --delete-branch --admin
 
   provenance:
     name: SLSA provenance
