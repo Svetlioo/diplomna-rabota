@@ -172,13 +172,13 @@ jobs:
         if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: sigstore/cosign-installer@v4.1.2
         with:
-          cosign-release: v2.4.3
+          cosign-release: v3.0.6
 
       - name: Sign image with Cosign (keyless)
         if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "$IMAGE"
+        run: cosign sign --yes --new-bundle-format=false "$IMAGE"
 
       - name: Generate CycloneDX SBOM with Syft
         if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -188,12 +188,19 @@ jobs:
           format: cyclonedx-json
           output-file: ${{ github.workspace }}/sbom.cdx.json
 
+      - name: Upload SBOM artifact
+        if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: sbom-bank-service
+          path: ${{ github.workspace }}/sbom.cdx.json
+
       - name: Attest SBOM with Cosign
         if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: ${{ github.workspace }}
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-        run: cosign attest --yes --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+        run: cosign attest --yes --new-bundle-format=false --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
 
   provenance:
     name: SLSA provenance
