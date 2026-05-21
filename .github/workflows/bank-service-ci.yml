@@ -184,6 +184,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, image]
     if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-dev-bank
+      cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
       TAG: ${{ needs.image.outputs.tag }}
