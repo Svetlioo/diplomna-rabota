@@ -127,11 +127,11 @@ recorded on `main`:
 
 | Scan | Mechanism | New problem in this PR | No problem | Pre-existing (not from this PR) |
 |---|---|---|---|---|
-| **build-test** | required job | ❌ compile/test failure blocks merge | ✅ passes | n/a |
-| **Gitleaks** (secrets) | required job + Push Protection | ❌ push rejected / job red → blocked | ✅ passes | not re-flagged (already in history → **rotate it**) |
-| **Semgrep** (SAST) | Code Scanning, diff-aware | ❌ new High+ alert blocks merge | ✅ passes | 👁️ visible in Security tab, ✅ does **not** block |
-| **Trivy SCA** (deps/IaC) | Code Scanning, diff-aware | ❌ new High/Critical (with a fix) blocks | ✅ passes | 👁️ visible, ✅ does **not** block |
-| **Trivy image** | Code Scanning, diff-aware | ❌ new image CVE blocks merge | ✅ passes | 👁️ visible, ✅ does **not** block |
+| **build-test** | required job | BLOCKS — compile/test failure | passes | n/a |
+| **Gitleaks** (secrets) | required job + Push Protection | BLOCKS — push rejected / job red | passes | not re-flagged (already in history — **rotate it**) |
+| **Semgrep** (SAST) | Code Scanning, diff-aware | BLOCKS — new High+ alert | passes | visible in Security tab, does **not** block |
+| **Trivy SCA** (deps/IaC) | Code Scanning, diff-aware | BLOCKS — new High/Critical (with a fix) | passes | visible, does **not** block |
+| **Trivy image** | Code Scanning, diff-aware | BLOCKS — new image CVE | passes | visible, does **not** block |
 | **Cosign + Kyverno** | cluster admission (not a PR gate) | unsigned/tampered image rejected at deploy | pod admitted | n/a |
 
 So a PR that introduces nothing vulnerable merges cleanly; a PR that adds a new High+
