@@ -9,6 +9,8 @@ The focus of this repository is **not** the business logic of the services, but 
 signing, SBOM generation, build provenance, and controlled GitOps deployment —
 validated against **SLSA Level 2** and industry regulations (DORA, NIS2, EU CRA, PCI DSS).
 
+> Българска версия: [README.bg.md](README.bg.md)
+
 ---
 
 ## What this demonstrates
