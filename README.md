@@ -107,17 +107,45 @@ The repo-wide scanners (`repo-security.yml`) run on **every** pull request, so t
 diff-aware gate always has results to compare — service-specific jobs are skipped when
 their service is untouched without blocking the merge.
 
-All scanners upload **SARIF** to GitHub Code Scanning. Blocking is **diff-aware**:
+### How the merge decision is made
 
-- A finding **introduced by a pull request** fails the required check → merge is blocked.
-- A **pre-existing** finding stays visible in the Security tab but does **not** block.
+Most scanners do **not** fail their own job — they run with `exit-code: 0` and only
+upload a **SARIF** report to GitHub Code Scanning. The merge decision is taken centrally
+by a branch **ruleset** ("Require code scanning results", threshold *High or higher*),
+not by each tool's exit code. This is what makes blocking **diff-aware**.
 
-This is enforced centrally through a required Code Scanning check, not per-tool exit
-codes, so the same policy applies to every SARIF-producing tool.
+**How diff-aware works:** every finding is given a stable fingerprint (rule + file +
+code context). On a pull request, the findings are matched against the baseline already
+recorded on `main`:
+
+- A finding that **matches the baseline** = pre-existing → shown in the Security tab,
+  but it does **not** fail the check.
+- A finding with **no match** = introduced by this PR → it **fails** the check at or
+  above the configured severity → merge is blocked.
+
+### Per-scan outcome
+
+| Scan | Mechanism | New problem in this PR | No problem | Pre-existing (not from this PR) |
+|---|---|---|---|---|
+| **build-test** | required job | ❌ compile/test failure blocks merge | ✅ passes | n/a |
+| **Gitleaks** (secrets) | required job + Push Protection | ❌ push rejected / job red → blocked | ✅ passes | not re-flagged (already in history → **rotate it**) |
+| **Semgrep** (SAST) | Code Scanning, diff-aware | ❌ new High+ alert blocks merge | ✅ passes | 👁️ visible in Security tab, ✅ does **not** block |
+| **Trivy SCA** (deps/IaC) | Code Scanning, diff-aware | ❌ new High/Critical (with a fix) blocks | ✅ passes | 👁️ visible, ✅ does **not** block |
+| **Trivy image** | Code Scanning, diff-aware | ❌ new image CVE blocks merge | ✅ passes | 👁️ visible, ✅ does **not** block |
+| **Cosign + Kyverno** | cluster admission (not a PR gate) | unsigned/tampered image rejected at deploy | pod admitted | n/a |
+
+So a PR that introduces nothing vulnerable merges cleanly; a PR that adds a new High+
+finding is blocked; and a PR that merely *touches* code near an old, pre-existing finding
+is **not** punished for it — the old finding stays visible but never blocks.
+
+> `Gitleaks` and `Cosign + Kyverno` are the two non-SARIF gates: Gitleaks fails its job
+> directly (and Push Protection rejects the `git push` itself), while Cosign/Kyverno act
+> at Kubernetes admission, not at merge time.
 
 Secret leakage is defended in depth: a local **gitleaks pre-commit hook**
 (`.pre-commit-config.yaml`) for prevention, GitHub **Push Protection** at the server,
-and the CI gitleaks job as a merge gate.
+and the CI gitleaks job as a merge gate. A secret that ever reaches history must be
+**rotated** — it stays in git forever.
 
 ---
 
