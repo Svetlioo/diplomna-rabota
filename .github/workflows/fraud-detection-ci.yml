@@ -177,7 +177,7 @@ jobs:
     needs: [changes, image]
     if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     concurrency:
-      group: deploy-dev-fraud
+      group: deploy-dev
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
