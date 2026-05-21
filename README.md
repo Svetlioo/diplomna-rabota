@@ -18,7 +18,7 @@ validated against **SLSA Level 2** and industry regulations (DORA, NIS2, EU CRA,
 | Hardcoded secret in a commit | Gitleaks (CI) + pre-commit hook + GitHub Push Protection |
 | Insecure code (e.g. SQL injection) | Semgrep SAST |
 | Vulnerable dependency | Trivy SCA |
-| Vulnerable base image | Trivy image scan |
+| Vulnerable base image | Pinned base-image digests + Trivy Dockerfile / IaC scan |
 | Unsigned / tampered image | Cosign keyless signing + Kyverno admission verification |
 | Untracked build origin | Syft SBOM + SLSA provenance attestation |
 | Uncontrolled deployment | GitOps (ArgoCD) — automated to dev, PR-gated to test/prod |
