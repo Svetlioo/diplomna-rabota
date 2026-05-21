@@ -155,7 +155,7 @@ jobs:
   deploy-dev:
     name: Deploy to dev (gitops)
     runs-on: ubuntu-latest
-    needs: [changes, image]
+    needs: [changes, image, provenance]
     if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     concurrency:
       group: deploy-dev
