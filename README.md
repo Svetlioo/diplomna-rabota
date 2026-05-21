@@ -63,9 +63,9 @@ with an identical structure but a different build stack (Maven vs pip). A separa
    │ changes │  detect which service / workflow changed (paths-filter)
    └────┬────┘
         ▼
-  ┌────────────┐   ┌──────────────────────┐
-  │ build-test │   │ sca (Trivy fs)       │  dependency CVEs → Code Scanning
-  └─────┬──────┘   └──────────────────────┘
+  ┌────────────┐
+  │ build-test │   compile + tests
+  └─────┬──────┘
         ▼
   ┌───────────────────────────────────────────────────────────┐
   │ image                                                       │
@@ -84,7 +84,6 @@ with an identical structure but a different build stack (Maven vs pip). A separa
 |---|---|
 | `changes` | Detects whether the service or its workflow changed |
 | `build-test` | Compiles and runs tests (Maven `verify` / `pip install` + smoke) |
-| `sca` | Trivy filesystem scan of dependencies (CRITICAL/HIGH, fixed only) → SARIF |
 | `image` | Build → Trivy image scan → push to GHCR → Cosign keyless sign → Syft CycloneDX SBOM → Cosign attest |
 | `deploy-dev` | Continuous delivery to dev (see below) |
 | `provenance` | SLSA build provenance via `slsa-github-generator` (SLSA Level 2 on GitHub-hosted runners) |
@@ -97,11 +96,16 @@ on the image and provenance jobs alone).
 
 ## Security scanning & diff-aware blocking
 
-| Tool | Scope |
-|---|---|
-| **Gitleaks** | Secrets across full git history |
-| **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` |
-| **Trivy** | Dependencies (SCA) + container image |
+| Tool | Scope | Where |
+|---|---|---|
+| **Gitleaks** | Secrets across full git history | repo-wide, every change |
+| **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` | repo-wide, every change |
+| **Trivy (SCA)** | Dependency / IaC vulnerabilities | repo-wide, every change |
+| **Trivy (image)** | OS packages + layers of the built image | per-service, on image build |
+
+The repo-wide scanners (`repo-security.yml`) run on **every** pull request, so the
+diff-aware gate always has results to compare — service-specific jobs are skipped when
+their service is untouched without blocking the merge.
 
 All scanners upload **SARIF** to GitHub Code Scanning. Blocking is **diff-aware**:
 
