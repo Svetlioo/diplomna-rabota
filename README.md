@@ -96,16 +96,15 @@ on the image and provenance jobs alone).
 
 ## Security scanning & diff-aware blocking
 
-| Tool | Scope | Where |
-|---|---|---|
-| **Gitleaks** | Secrets across full git history | repo-wide, every change |
-| **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` | repo-wide, every change |
-| **Trivy (SCA)** | Dependency / IaC vulnerabilities | repo-wide, every change |
-| **Trivy (image)** | OS packages + layers of the built image | per-service, on image build |
+| Tool | Scope |
+|---|---|
+| **Gitleaks** | Secrets across full git history |
+| **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` |
+| **Trivy** | Dependencies (SCA) + IaC / Dockerfile misconfiguration |
 
-The repo-wide scanners (`repo-security.yml`) run on **every** pull request, so the
-diff-aware gate always has results to compare — service-specific jobs are skipped when
-their service is untouched without blocking the merge.
+All three scanners live in `repo-security.yml`, run **repo-wide on every pull request**,
+and upload **SARIF** to GitHub Code Scanning. Because they always run, the diff-aware
+gate always has a baseline to compare against and never stalls a pull request.
 
 ### How the merge decision is made
 
@@ -130,8 +129,7 @@ recorded on `main`:
 | **build-test** | required job | BLOCKS — compile/test failure | passes | n/a |
 | **Gitleaks** (secrets) | required job + Push Protection | BLOCKS — push rejected / job red | passes | not re-flagged (already in history — **rotate it**) |
 | **Semgrep** (SAST) | Code Scanning, diff-aware | BLOCKS — new High+ alert | passes | visible in Security tab, does **not** block |
-| **Trivy SCA** (deps/IaC) | Code Scanning, diff-aware | BLOCKS — new High/Critical (with a fix) | passes | visible, does **not** block |
-| **Trivy image** | Code Scanning, diff-aware | BLOCKS — new image CVE | passes | visible, does **not** block |
+| **Trivy** (deps/IaC) | Code Scanning, diff-aware | BLOCKS — new High/Critical (with a fix) | passes | visible, does **not** block |
 | **Cosign + Kyverno** | cluster admission (not a PR gate) | unsigned/tampered image rejected at deploy | pod admitted | n/a |
 
 So a PR that introduces nothing vulnerable merges cleanly; a PR that adds a new High+
