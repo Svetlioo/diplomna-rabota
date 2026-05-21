@@ -91,6 +91,7 @@ jobs:
     outputs:
       image: ghcr.io/svetlioo/fraud-detection
       digest: ${{ steps.push.outputs.digest }}
+      tag: ${{ steps.ver.outputs.tag }}
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -193,6 +194,34 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
         run: cosign attest --yes --new-bundle-format=false --use-signing-config=false --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+
+  deploy-dev:
+    name: Deploy to dev (gitops)
+    runs-on: ubuntu-latest
+    needs: [changes, image]
+    if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout gitops repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: Svetlioo/diplomna-rabota-gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+
+      - name: Bump dev image to new tag + digest
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+        run: yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-fraud.yaml
+
+      - name: Commit & push
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add environments/dev/values-fraud.yaml
+          git commit -m "chore(dev): deploy fraud-detection ${TAG}"
+          git push
 
   provenance:
     name: SLSA provenance
