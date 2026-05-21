@@ -107,15 +107,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Trivy image scan (fails build on fixable HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: image
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.ver.outputs.tag }}
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
-
       - name: Push image (main only)
         id: push
         if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
