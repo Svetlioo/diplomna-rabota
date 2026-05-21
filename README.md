@@ -1,216 +1,123 @@
-# Secure Software Supply Chain for Containerized Distributed Applications
+# Защита на софтуерната верига за доставка
 
-A DevSecOps reference implementation that secures the software supply chain of a
-containerized, distributed banking application running on Kubernetes — built as a
-bachelor's thesis at the Technical University of Sofia (Cybersecurity).
+DevSecOps реализация, която защитава софтуерната верига за доставка на
+контейнеризирано банково приложение в Kubernetes — бакалавърска дипломна работа
+(ТУ София, Киберсигурност).
 
-The focus of this repository is **not** the business logic of the services, but the
-**secure delivery pipeline** around them: automated security scanning, artifact
-signing, SBOM generation, build provenance, and controlled GitOps deployment —
-validated against **SLSA Level 2** and industry regulations (DORA, NIS2, EU CRA, PCI DSS).
-
-> Българска версия: [README.bg.md](README.bg.md)
+Фокусът на това репозитори е **сигурната доставка** на сервизите (сканове,
+подписване, SBOM, provenance, контролиран GitOps деплой), а не бизнес логиката им.
+Целта е **SLSA Level 2** + индустриални регулации (DORA, NIS2, EU CRA, PCI DSS).
 
 ---
 
-## What this demonstrates
+## Репозитории
 
-| Supply-chain risk | Control |
+| Репо | Отговорност |
 |---|---|
-| Hardcoded secret in a commit | Gitleaks (CI) + pre-commit hook + GitHub Push Protection |
-| Insecure code (e.g. SQL injection) | Semgrep SAST |
-| Vulnerable dependency | Trivy SCA |
-| Vulnerable base image | Pinned base-image digests + Trivy Dockerfile / IaC scan |
-| Unsigned / tampered image | Cosign keyless signing + Kyverno admission verification |
-| Untracked build origin | Syft SBOM + SLSA provenance attestation |
-| Uncontrolled deployment | GitOps (ArgoCD) — automated to dev, PR-gated to test/prod |
+| **`diplomna-rabota`** (това) | Сорс на сервизите, Dockerfile-и, GitHub Actions CI/CD |
+| **`diplomna-rabota-infra`** | Terraform — Azure foundation + AKS клъстер |
+| **`diplomna-rabota-gitops`** | Desired state на клъстера (Helm charts, per-env values, ArgoCD apps, Kyverno) |
+
+## Сервизи
+
+- **bank-service** — Spring Boot / Java 25, една PostgreSQL база
+- **fraud-detection** — Python / FastAPI, без състояние
+
+И двата се build-ват от пинати официални базови образи, въртят като non-root с
+read-only root filesystem, и се деплойват през собствени Helm charts.
 
 ---
 
-## Repositories
+## CI/CD поток
 
-The system is split across three repositories:
+Два service workflow-а (`bank-service-ci.yml`, `fraud-detection-ci.yml`) с еднаква
+структура, различен build stack (Maven / pip). Отделен `repo-security.yml` пуска
+repo-wide скенерите.
 
-| Repository | Responsibility |
+### При Pull Request към `main`
+- `changes` (paths-filter) — открива кои сервизи са пипнати.
+- За **всеки променен сервиз**: `build-test` (компилация + тестове) и `image`
+  (build за валидация, че Dockerfile-ът работи). Образът **не се публикува** на PR.
+- `repo-security` (**винаги**, върху целия repo): Gitleaks, Semgrep, Trivy → качват
+  SARIF в GitHub Code Scanning.
+- Скановете решават дали merge е разрешен (виж по-долу).
+
+### При push към `main` (след merge)
+- За променения сервиз: `image` build-ва, **push-ва в ghcr.io**, **подписва** с Cosign,
+  прави **SBOM** (Syft) и **SLSA provenance**.
+- `deploy-dev` обновява dev средата в gitops (виж „Деплой").
+
+---
+
+## Сигурностни сканове — кога блокира, кога пуска
+
+| Скенер | Какво хваща |
 |---|---|
-| **`diplomna-rabota`** (this) | Application source, Dockerfiles, GitHub Actions CI/CD |
-| **`diplomna-rabota-infra`** | Terraform — Azure foundation + AKS cluster |
-| **`diplomna-rabota-gitops`** | Desired cluster state (Helm charts, per-env values, ArgoCD apps, Kyverno policies) |
+| **Gitleaks** | Тайни (hardcoded secrets) |
+| **Semgrep** | Опасен код (SAST) — напр. SQL injection |
+| **Trivy** | Уязвими зависимости (SCA) + Dockerfile / IaC проблеми |
 
----
+И трите се пускат върху **целия repo на всеки PR** и качват резултати в Code Scanning.
+Блокирането е **diff-aware**: преценява се спрямо вече записаното на `main`.
 
-## Services
+### Кога НЕ ти дава да мърджнеш (блокира)
+- **Нов** secret в PR-а → Gitleaks (+ Push Protection отказва самия `git push`).
+- **Нов** опасен код (SQLi) → Semgrep.
+- **Нова** уязвима зависимост (High/Critical с налична поправка) → Trivy.
+- Провален build или тест → `build-test`.
 
-Two independently built and deployed services (business logic intentionally out of scope here):
+### Кога ти дава да мърджнеш
+- Няма нов проблем в PR-а.
+- Има проблем, но е **стар** (вече на `main`) — показва се в Security tab, но **не блокира**.
+  Тоест докосваш код близо до стара уязвимост → не те наказва за нея.
 
-- **bank-service** — Spring Boot / Java 25, one PostgreSQL database
-- **fraud-detection** — Python / FastAPI, stateless
-
-Both are containerized from pinned official base images, run as non-root with a
-read-only root filesystem, and are deployed via custom Helm charts.
-
----
-
-## CI/CD pipeline
-
-Each service has its own workflow (`bank-service-ci.yml`, `fraud-detection-ci.yml`)
-with an identical structure but a different build stack (Maven vs pip). A separate
-`repo-security.yml` runs repository-wide scanners.
-
-```
- PR / push to main
-        │
-        ▼
-   ┌─────────┐
-   │ changes │  detect which service / workflow changed (paths-filter)
-   └────┬────┘
-        ▼
-  ┌────────────┐
-  │ build-test │   compile + tests
-  └─────┬──────┘
-        ▼
-  ┌───────────────────────────────────────────────────────────┐
-  │ image                                                       │
-  │  build → push (ghcr.io) → Cosign sign (keyless)             │
-  │  → Syft SBOM → Cosign attest                                │
-  └───────────────┬───────────────────────────┬───────────────┘
-                  ▼                           ▼
-        ┌──────────────────┐        ┌────────────────────┐
-        │ deploy-dev (CD)  │        │ provenance (SLSA)  │
-        │ auto-merged      │        │ build attestation  │
-        │ gitops PR → dev  │        └────────────────────┘
-        └──────────────────┘
-```
-
-| Job | What it does |
+### Доказани сценарии (тествани)
+| Промяна в PR | Резултат |
 |---|---|
-| `changes` | Detects whether the service or its workflow changed |
-| `build-test` | Compiles and runs tests (Maven `verify` / `pip install` + smoke) |
-| `image` | Build → push to GHCR → Cosign keyless sign → Syft CycloneDX SBOM → Cosign attest |
-| `deploy-dev` | Continuous delivery to dev — opens and auto-merges a gitops PR bumping the dev image; a shared `concurrency` group serialises deploys so each one rebases on the latest state |
-| `provenance` | SLSA build provenance via `slsa-github-generator` (SLSA Level 2 on GitHub-hosted runners) |
-
-Container scanning of the codebase (dependencies, IaC, Dockerfiles) is handled
-repo-wide by Trivy in `repo-security.yml` (see below), not per service.
-
-**Least privilege:** the workflow grants only `contents: read` globally; each job
-elevates only the permissions it needs (`packages` / `id-token` on the image and
-provenance jobs; `security-events` on the repo-wide scanners).
+| `log4j-core 2.14.1` (Log4Shell) | Trivy → 2 Critical + 1 High → **червено, блокиран** |
+| Конкатениран SQL в `executeQuery` | Semgrep → **червено, блокиран** |
+| Hardcoded AWS ключ | Gitleaks → **червено, блокиран** |
+| Чист код (PreparedStatement, без тайна, без уязвима зависимост) | **зелено, мърджва се** |
 
 ---
 
-## Security scanning & diff-aware blocking
+## Supply chain сигурност
 
-| Tool | Scope |
-|---|---|
-| **Gitleaks** | Secrets across full git history |
-| **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` |
-| **Trivy** | Dependencies (SCA) + IaC / Dockerfile misconfiguration |
-
-All three scanners live in `repo-security.yml`, run **repo-wide on every pull request**,
-and upload **SARIF** to GitHub Code Scanning. Because they always run, the diff-aware
-gate always has a baseline to compare against and never stalls a pull request.
-
-### How the merge decision is made
-
-Most scanners do **not** fail their own job — they run with `exit-code: 0` and only
-upload a **SARIF** report to GitHub Code Scanning. The merge decision is taken centrally
-by a branch **ruleset** ("Require code scanning results", threshold *High or higher*),
-not by each tool's exit code. This is what makes blocking **diff-aware**.
-
-**How diff-aware works:** every finding is given a stable fingerprint (rule + file +
-code context). On a pull request, the findings are matched against the baseline already
-recorded on `main`:
-
-- A finding that **matches the baseline** = pre-existing → shown in the Security tab,
-  but it does **not** fail the check.
-- A finding with **no match** = introduced by this PR → it **fails** the check at or
-  above the configured severity → merge is blocked.
-
-### Per-scan outcome
-
-| Scan | Mechanism | New problem in this PR | No problem | Pre-existing (not from this PR) |
-|---|---|---|---|---|
-| **build-test** | required job | BLOCKS — compile/test failure | passes | n/a |
-| **Gitleaks** (secrets) | required job + Push Protection | BLOCKS — push rejected / job red | passes | not re-flagged (already in history — **rotate it**) |
-| **Semgrep** (SAST) | Code Scanning, diff-aware | BLOCKS — new High+ alert | passes | visible in Security tab, does **not** block |
-| **Trivy** (deps/IaC) | Code Scanning, diff-aware | BLOCKS — new High/Critical (with a fix) | passes | visible, does **not** block |
-| **Cosign + Kyverno** | cluster admission (not a PR gate) | unsigned/tampered image rejected at deploy | pod admitted | n/a |
-
-So a PR that introduces nothing vulnerable merges cleanly; a PR that adds a new High+
-finding is blocked; and a PR that merely *touches* code near an old, pre-existing finding
-is **not** punished for it — the old finding stays visible but never blocks.
-
-> `Gitleaks` and `Cosign + Kyverno` are the two non-SARIF gates: Gitleaks fails its job
-> directly (and Push Protection rejects the `git push` itself), while Cosign/Kyverno act
-> at Kubernetes admission, not at merge time.
-
-Secret leakage is defended in depth: a local **gitleaks pre-commit hook**
-(`.pre-commit-config.yaml`) for prevention, GitHub **Push Protection** at the server,
-and the CI gitleaks job as a merge gate. A secret that ever reaches history must be
-**rotated** — it stays in git forever.
+- **Подписване** — Cosign keyless (Sigstore, OIDC → Fulcio → Rekor); подпис **по digest**.
+- **SBOM** — Syft CycloneDX, закачен към образа като Cosign attestation + качен като artifact.
+- **Provenance** — `slsa-github-generator` (SLSA Level 2).
+- **Admission** — Kyverno проверява Cosign подписа (workflow самоличност + issuer + Rekor)
+  преди да допусне образ в клъстера; неподписан/подменен образ се отказва.
 
 ---
 
-## Supply chain security
+## Деплой (GitOps)
 
-- **Signing** — Cosign keyless signing (Sigstore, OIDC → Fulcio → Rekor); images are
-  signed by digest, not tag.
-- **SBOM** — Syft generates a CycloneDX SBOM, attached to the image as a Cosign
-  attestation and uploaded as a workflow artifact for visibility.
-- **Provenance** — `slsa-github-generator` produces SLSA build provenance (Level 2).
-- **Admission control** — Kyverno verifies the Cosign signature (keyless attestor:
-  workflow identity + issuer + Rekor) before any image is admitted to the cluster, and
-  pins images to their digest. Unsigned or tampered images are rejected.
+Клъстерът (AKS) има среди `dev` / `test` / `prod`, реконсилирани от **ArgoCD** от
+gitops репозиторито.
 
----
+- **Деплойва се само променения сервиз.** Промениш bank → само bank се деплойва.
+  Промениш и двата сервиза → **два отделни PR-а** (по един за всеки).
+- Deploy-ите са **сериализирани** (обща `concurrency` група) — един по един, всеки
+  чете най-новия `main`, така че няма конфликти.
+- **dev = автоматично** — CI отваря и **авто-merge-ва** PR в gitops с новия образ.
+- **test / prod = ръчно** — Promote workflow в gitops отваря PR, който **човек одобрява**
+  (separation of duties). prod винаги взима test-валидирания образ.
 
-## Deployment (GitOps)
-
-The cluster runs on Azure Kubernetes Service with `dev` / `test` / `prod` namespaces,
-reconciled by **ArgoCD** from the gitops repository.
-
-```
- image built & signed (CI)
-        │
-        ▼
-  dev   ── automatic ──▶ CI opens & auto-merges a gitops PR bumping the dev image
-        │                (full audit trail, zero manual steps) → ArgoCD syncs dev
-        ▼
-  test  ── PR-gated ───▶ "Promote" workflow opens a PR; a human reviews and merges
-        ▼
-  prod  ── PR-gated ───▶ same, separation of duties (change management)
-```
-
-Each environment pins both the image **tag** (readability) and **digest**
-(immutability). ArgoCD reconciles the desired state from git.
+Всяка среда пинва едновременно **tag** (четимост) и **digest** (неизменност).
 
 ---
 
-## Repository structure
+## Настройка на репото (еднократно)
 
-```
-.
-├── apps/
-│   ├── bank-service/        # Spring Boot / Java 25
-│   └── fraud-detection/     # Python / FastAPI
-├── .github/workflows/
-│   ├── bank-service-ci.yml
-│   ├── fraud-detection-ci.yml
-│   └── repo-security.yml
-├── .pre-commit-config.yaml  # gitleaks pre-commit hook
-└── docker-compose.yml       # local development
-```
+- **Branch ruleset** на `main`: изисквай PR, изисквай status checks, изисквай
+  „code scanning results" (Trivy + Semgrep, праг *High or higher*), блокирай force push.
+- **Secret scanning + Push protection** (безплатно за публични repos).
+- Secret **`GITOPS_TOKEN`** (fine-grained PAT) за dev авто-деплоя.
+- В gitops репото: разреши на GitHub Actions да създава PR-и (за Promote workflow-а).
 
 ---
 
-## Standards & frameworks
-
-SLSA v1.1 (target Level 2) · NIST SSDF · OWASP Top 10 for Kubernetes · CIS Kubernetes
-Benchmark · STRIDE threat modeling · DORA · NIS2 · EU Cyber Resilience Act · PCI DSS v4.0
-
----
-
-## License
+## Лиценз
 
 [Apache License 2.0](LICENSE)
