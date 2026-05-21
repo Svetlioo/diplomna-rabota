@@ -18,7 +18,7 @@ validated against **SLSA Level 2** and industry regulations (DORA, NIS2, EU CRA,
 | Hardcoded secret in a commit | Gitleaks (CI) + pre-commit hook + GitHub Push Protection |
 | Insecure code (e.g. SQL injection) | Semgrep SAST |
 | Vulnerable dependency | Trivy SCA |
-| Vulnerable base image | Trivy image scan |
+| Vulnerable base image | Pinned base-image digests + Trivy Dockerfile / IaC scan |
 | Unsigned / tampered image | Cosign keyless signing + Kyverno admission verification |
 | Untracked build origin | Syft SBOM + SLSA provenance attestation |
 | Uncontrolled deployment | GitOps (ArgoCD) — automated to dev, PR-gated to test/prod |
@@ -69,14 +69,14 @@ with an identical structure but a different build stack (Maven vs pip). A separa
         ▼
   ┌───────────────────────────────────────────────────────────┐
   │ image                                                       │
-  │  build → Trivy image scan → push (ghcr.io)                  │
-  │  → Cosign sign (keyless) → Syft SBOM → Cosign attest        │
+  │  build → push (ghcr.io) → Cosign sign (keyless)             │
+  │  → Syft SBOM → Cosign attest                                │
   └───────────────┬───────────────────────────┬───────────────┘
                   ▼                           ▼
         ┌──────────────────┐        ┌────────────────────┐
         │ deploy-dev (CD)  │        │ provenance (SLSA)  │
-        │ bump dev image   │        │ build attestation  │
-        │ via gitops PR    │        └────────────────────┘
+        │ auto-merged      │        │ build attestation  │
+        │ gitops PR → dev  │        └────────────────────┘
         └──────────────────┘
 ```
 
@@ -84,13 +84,16 @@ with an identical structure but a different build stack (Maven vs pip). A separa
 |---|---|
 | `changes` | Detects whether the service or its workflow changed |
 | `build-test` | Compiles and runs tests (Maven `verify` / `pip install` + smoke) |
-| `image` | Build → Trivy image scan → push to GHCR → Cosign keyless sign → Syft CycloneDX SBOM → Cosign attest |
-| `deploy-dev` | Continuous delivery to dev (see below) |
+| `image` | Build → push to GHCR → Cosign keyless sign → Syft CycloneDX SBOM → Cosign attest |
+| `deploy-dev` | Continuous delivery to dev — opens and auto-merges a gitops PR bumping the dev image; a shared `concurrency` group serialises deploys so each one rebases on the latest state |
 | `provenance` | SLSA build provenance via `slsa-github-generator` (SLSA Level 2 on GitHub-hosted runners) |
 
+Container scanning of the codebase (dependencies, IaC, Dockerfiles) is handled
+repo-wide by Trivy in `repo-security.yml` (see below), not per service.
+
 **Least privilege:** the workflow grants only `contents: read` globally; each job
-elevates only the permissions it needs (`packages` / `id-token` / `security-events`
-on the image and provenance jobs alone).
+elevates only the permissions it needs (`packages` / `id-token` on the image and
+provenance jobs; `security-events` on the repo-wide scanners).
 
 ---
 
