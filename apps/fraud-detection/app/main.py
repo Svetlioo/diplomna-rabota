@@ -1,4 +1,3 @@
-# trivial change to trigger the fraud-detection pipeline (test)
 import os
 
 from fastapi import FastAPI
