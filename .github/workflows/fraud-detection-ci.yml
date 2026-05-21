@@ -170,7 +170,7 @@ jobs:
         if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-        run: cosign sign --yes --new-bundle-format=false "$IMAGE"
+        run: cosign sign --yes --new-bundle-format=false --use-signing-config=false "$IMAGE"
 
       - name: Generate CycloneDX SBOM with Syft
         if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -192,7 +192,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
-        run: cosign attest --yes --new-bundle-format=false --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+        run: cosign attest --yes --new-bundle-format=false --use-signing-config=false --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
 
   provenance:
     name: SLSA provenance
