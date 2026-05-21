@@ -11,7 +11,7 @@
 	<groupId>bg.tu-sofia.diploma</groupId>
 	<artifactId>bank-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
+	<name>bank-service</name>
 	<description/>
 	<url/>
 	<licenses>
