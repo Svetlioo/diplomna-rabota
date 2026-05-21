@@ -219,10 +219,10 @@ jobs:
           git checkout -b "$BRANCH"
           yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-fraud.yaml
           git add environments/dev/values-fraud.yaml
-          git commit -m "chore(dev): deploy fraud-detection ${TAG}"
+          git commit -m "deploy(dev): fraud-detection ${TAG}"
           git push -u origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
-            --title "chore(dev): deploy fraud-detection ${TAG}" \
+            --title "deploy(dev): fraud-detection ${TAG}" \
             --body "Automated dev deploy from fraud-detection CI run ${{ github.run_id }}."
           gh pr merge "$BRANCH" --squash --delete-branch --admin
 

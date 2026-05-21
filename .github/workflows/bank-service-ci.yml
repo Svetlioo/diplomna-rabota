@@ -227,10 +227,10 @@ jobs:
           git checkout -b "$BRANCH"
           yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-bank.yaml
           git add environments/dev/values-bank.yaml
-          git commit -m "chore(dev): deploy bank-service ${TAG}"
+          git commit -m "deploy(dev): bank-service ${TAG}"
           git push -u origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
-            --title "chore(dev): deploy bank-service ${TAG}" \
+            --title "deploy(dev): bank-service ${TAG}" \
             --body "Automated dev deploy from bank-service CI run ${{ github.run_id }}."
           gh pr merge "$BRANCH" --squash --delete-branch --admin
 
