@@ -1,0 +1,204 @@
+name: fraud-detection CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+  id-token: write
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      fraud: ${{ steps.filter.outputs.fraud }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: dorny/paths-filter@v4.0.1
+        id: filter
+        with:
+          filters: |
+            fraud:
+              - 'apps/fraud-detection/**'
+              - '.github/workflows/fraud-detection-ci.yml'
+
+  build-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.fraud == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    defaults:
+      run:
+        working-directory: apps/fraud-detection
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Import smoke test
+        run: python -c "import app.main"
+
+  sca:
+    name: Trivy SCA (dependencies)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.fraud == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: apps/fraud-detection
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4.35.5
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-fraud-detection
+
+  image:
+    name: Build & scan container image
+    runs-on: ubuntu-latest
+    needs: [changes, build-test]
+    if: needs.changes.outputs.fraud == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    defaults:
+      run:
+        working-directory: apps/fraud-detection
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: svetlioo/fraud-detection
+    outputs:
+      image: ghcr.io/svetlioo/fraud-detection
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Compute image tag
+        id: ver
+        run: |
+          version=0.0.1
+          short_sha=${GITHUB_SHA::7}
+          echo "tag=${version}-build.${{ github.run_number }}-${short_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.0.0
+
+      - name: Log in to GHCR
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v6.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.ver.outputs.tag }}
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build image (load locally for scanning)
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: apps/fraud-detection
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.ver.outputs.tag }}
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image.sarif
+
+      - name: Upload image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4.35.5
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-fraud-detection-image
+
+      - name: Push image (main only)
+        id: push
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: apps/fraud-detection
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+
+      - name: Install Cosign
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v2.4.3
+
+      - name: Sign image with Cosign (keyless)
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$IMAGE"
+
+      - name: Generate CycloneDX SBOM with Syft
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+          format: cyclonedx-json
+          output-file: ${{ github.workspace }}/sbom.cdx.json
+
+      - name: Attest SBOM with Cosign
+        if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: ${{ github.workspace }}
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+        run: cosign attest --yes --predicate sbom.cdx.json --type cyclonedx "$IMAGE"
+
+  provenance:
+    name: SLSA provenance
+    needs: [changes, image]
+    if: needs.changes.outputs.fraud == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      actions: read
+      id-token: write
+      packages: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ needs.image.outputs.image }}
+      digest: ${{ needs.image.outputs.digest }}
+      registry-username: ${{ github.actor }}
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
