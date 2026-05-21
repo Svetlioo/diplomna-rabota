@@ -101,11 +101,13 @@ on the image and provenance jobs alone).
 | **Gitleaks** | Secrets across full git history | repo-wide, every change |
 | **Semgrep** | SAST — `p/java`, `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` | repo-wide, every change |
 | **Trivy (SCA)** | Dependency / IaC vulnerabilities | repo-wide, every change |
-| **Trivy (image)** | OS packages + layers of the built image | per-service, on image build |
+| **Trivy (image)** | OS packages + layers of the built image | per-service, fails the build on fixable HIGH/CRITICAL |
 
 The repo-wide scanners (`repo-security.yml`) run on **every** pull request, so the
-diff-aware gate always has results to compare — service-specific jobs are skipped when
-their service is untouched without blocking the merge.
+diff-aware Code Scanning gate always has results to compare — service-specific jobs are
+skipped when their service is untouched without blocking the merge. The per-service
+Trivy **image** scan is a direct build gate (`exit-code: 1`), not a Code Scanning
+configuration, so it never leaves a gated configuration that could stall an unrelated PR.
 
 ### How the merge decision is made
 
@@ -131,7 +133,7 @@ recorded on `main`:
 | **Gitleaks** (secrets) | required job + Push Protection | BLOCKS — push rejected / job red | passes | not re-flagged (already in history — **rotate it**) |
 | **Semgrep** (SAST) | Code Scanning, diff-aware | BLOCKS — new High+ alert | passes | visible in Security tab, does **not** block |
 | **Trivy SCA** (deps/IaC) | Code Scanning, diff-aware | BLOCKS — new High/Critical (with a fix) | passes | visible, does **not** block |
-| **Trivy image** | Code Scanning, diff-aware | BLOCKS — new image CVE | passes | visible, does **not** block |
+| **Trivy image** | build gate (`exit-code: 1`) | BLOCKS — any fixable High/Critical in the image | passes | also blocks (fix the base image) |
 | **Cosign + Kyverno** | cluster admission (not a PR gate) | unsigned/tampered image rejected at deploy | pod admitted | n/a |
 
 So a PR that introduces nothing vulnerable merges cleanly; a PR that adds a new High+
