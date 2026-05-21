@@ -8,12 +8,13 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   gitleaks:
     name: Gitleaks (secrets)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6.0.2
         with:
@@ -27,6 +28,9 @@ jobs:
   semgrep:
     name: Semgrep (SAST)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     container:
       image: semgrep/semgrep:1.163.0
     steps:
@@ -36,6 +40,7 @@ jobs:
         run: |
           semgrep scan \
             --config=p/java \
+            --config=p/python \
             --config=p/security-audit \
             --config=p/owasp-top-ten \
             --config=p/cwe-top-25 \

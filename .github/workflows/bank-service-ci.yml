@@ -8,9 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  packages: write
-  id-token: write
 
 jobs:
   changes:
@@ -54,6 +51,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.bank == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -80,6 +80,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, build-test]
     if: needs.changes.outputs.bank == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
     defaults:
       run:
         working-directory: apps/bank-service
@@ -208,6 +213,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, image]
     if: needs.changes.outputs.bank == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+      TAG: ${{ needs.image.outputs.tag }}
+      DIGEST: ${{ needs.image.outputs.digest }}
+      BRANCH: deploy/bank-dev-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout gitops repo
         uses: actions/checkout@v6.0.2
@@ -215,24 +225,28 @@ jobs:
           repository: Svetlioo/diplomna-rabota-gitops
           token: ${{ secrets.GITOPS_TOKEN }}
 
-      - name: Open & auto-merge dev deploy PR
-        env:
-          GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
-          TAG: ${{ needs.image.outputs.tag }}
-          DIGEST: ${{ needs.image.outputs.digest }}
-          BRANCH: deploy/bank-dev-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Create deploy branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
+
+      - name: Update dev image tag + digest
+        run: |
           yq -i '.image.tag = strenv(TAG) | .image.digest = strenv(DIGEST)' environments/dev/values-bank.yaml
-          git add environments/dev/values-bank.yaml
-          git commit -m "deploy(dev): bank-service ${TAG}"
-          git push -u origin "$BRANCH"
+          git commit -am "deploy(dev): bank-service ${TAG}"
+
+      - name: Push deploy branch
+        run: git push -u origin "$BRANCH"
+
+      - name: Open pull request
+        run: |
           gh pr create --base main --head "$BRANCH" \
             --title "deploy(dev): bank-service ${TAG}" \
             --body "Automated dev deploy from bank-service CI run ${{ github.run_id }}."
-          gh pr merge "$BRANCH" --squash --delete-branch --admin
+
+      - name: Merge pull request
+        run: gh pr merge "$BRANCH" --squash --delete-branch --admin
 
   provenance:
     name: SLSA provenance
