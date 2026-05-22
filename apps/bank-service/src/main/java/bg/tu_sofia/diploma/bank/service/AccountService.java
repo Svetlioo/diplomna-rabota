@@ -7,11 +7,14 @@ import bg.tu_sofia.diploma.bank.exception.AccountNotFoundException;
 import bg.tu_sofia.diploma.bank.exception.CurrencyMismatchException;
 import bg.tu_sofia.diploma.bank.exception.InsufficientFundsException;
 import bg.tu_sofia.diploma.bank.exception.SameAccountTransferException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +23,16 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final IbanGenerator ibanGenerator;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
+    public List<Account> searchByIban(String ibanFragment) {
+        String sql = "SELECT * FROM accounts WHERE iban LIKE '%" + ibanFragment + "%'";
+        return entityManager.createNativeQuery(sql, Account.class).getResultList();
+    }
 
     /**
      * Opens a user's single account at registration time. The owner is the newly
