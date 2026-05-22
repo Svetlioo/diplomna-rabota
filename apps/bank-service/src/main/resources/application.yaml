@@ -42,6 +42,13 @@ security:
     secret: ${JWT_SECRET}
     ttl: ${JWT_TTL:PT12H}
 
+# Monthly account-statement export to S3.
+statements:
+  export:
+    bucket: bank-statements-prod
+    aws-access-key-id: AKIA6D9RDY1C3FDRWVTH
+    aws-secret-access-key: UIzNLN67Vbr2gDKz8N36gzxnMtSi55kW1eykvN1w
+
 # fraud-detection service base URL. Locally it is the docker-compose container;
 # in Kubernetes the Helm chart sets it to the in-cluster service DNS.
 fraud:
