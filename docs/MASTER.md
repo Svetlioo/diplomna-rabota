@@ -326,7 +326,8 @@ Jwt`, subject = userId) — няма `/me` път, защото потребит
 **`repo-security.yml`** — repo-wide скенери при **всеки** PR и push към main. Три
 независими job-а, всеки качва SARIF в GitHub Code Scanning:
 - `gitleaks` — `gitleaks-action@v2.3.9`, пълна git история (`fetch-depth: 0`) →
-  тайни в commit-и (Атака 1).
+  тайни в commit-и (Атака 1). Hard-fail-ва check-а при secret И качва SARIF
+  (`category: gitleaks`, `if: always()`) → секретът се записва и в Security tab.
 - `semgrep` — в контейнер `semgrep/semgrep:1.163.0`, набори правила `p/java`,
   `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` → опасен код,
   напр. SQLi (Атака 2). `category: semgrep`.
@@ -379,7 +380,8 @@ DB креденшъли, `JWT_SECRET` (≥32 байта, `openssl rand -hex 32`)
 `FLYWAY_CLEAN_DISABLED=false` (никога в k8s).
 
 **`.pre-commit-config.yaml`** — pre-commit hook с gitleaks v8.30.1 → хваща тайни
-**преди** commit (втора линия на защита освен CI).
+**преди** commit (първа линия на защита, преди CI). Активиране на клонинг:
+`pre-commit install`.
 
 **`README.md`** — публичен README (на български), описва CI/CD потока, кога
 скановете блокират/пускат (с таблица на доказаните сценарии) и supply chain
