@@ -326,7 +326,8 @@ Jwt`, subject = userId) — няма `/me` път, защото потребит
 **`repo-security.yml`** — repo-wide скенери при **всеки** PR и push към main. Три
 независими job-а, всеки качва SARIF в GitHub Code Scanning:
 - `gitleaks` — `gitleaks-action@v2.3.9`, пълна git история (`fetch-depth: 0`) →
-  тайни в commit-и (Атака 1).
+  тайни в commit-и (Атака 1). Hard-fail-ва check-а при secret И качва SARIF
+  (`category: gitleaks`, `if: always()`) → секретът се записва и в Security tab.
 - `semgrep` — в контейнер `semgrep/semgrep:1.163.0`, набори правила `p/java`,
   `p/python`, `p/security-audit`, `p/owasp-top-ten`, `p/cwe-top-25` → опасен код,
   напр. SQLi (Атака 2). `category: semgrep`.
@@ -379,7 +380,8 @@ DB креденшъли, `JWT_SECRET` (≥32 байта, `openssl rand -hex 32`)
 `FLYWAY_CLEAN_DISABLED=false` (никога в k8s).
 
 **`.pre-commit-config.yaml`** — pre-commit hook с gitleaks v8.30.1 → хваща тайни
-**преди** commit (втора линия на защита освен CI).
+**преди** commit (първа линия на защита, преди CI). Активиране на клонинг:
+`pre-commit install`.
 
 **`README.md`** — публичен README (на български), описва CI/CD потока, кога
 скановете блокират/пускат (с таблица на доказаните сценарии) и supply chain
@@ -412,6 +414,15 @@ kubernetes/helm provider-ите).
 **Защо отделни модули, а не един:** изолация на state и на „blast radius". Можеш да
 правиш `terraform apply` на `data/` без да пипаш `aks/`. `shared` се прави първи
 (държи state storage-а), после `aks`, после `data/argocd/kyverno`.
+
+### 4.0 CI сигурност (`repo-security.yml` + pre-commit)
+
+`.github/workflows/repo-security.yml` — на всеки PR/push: `gitleaks` (тайни) +
+`trivy` със **`scan-type: config`** (IaC misconfig върху Terraform-а), и двете качват
+SARIF → GitHub Code Scanning. Блокиране като в главния repo: required check
+`Gitleaks (secrets)` + ruleset „Require code scanning results" (Trivy, High+,
+diff-aware). `.pre-commit-config.yaml` (gitleaks v8.30.1) дава локален gate преди
+commit (`pre-commit install`).
 
 ### 4.1 `shared/` — foundation
 
@@ -478,13 +489,22 @@ diplomna-rabota-gitops/
 ├── helm-charts/     custom charts: bank-service, fraud-detection
 ├── environments/    per-env values: dev/test/prod × bank/fraud
 ├── policies/        Kyverno ClusterPolicy (Cosign verify)
-└── .github/workflows/promote.yml
+├── .github/workflows/  promote.yml + repo-security.yml
+└── .pre-commit-config.yaml  gitleaks pre-commit hook
 ```
 
 **Моделът „app-of-apps":** ArgoCD-то инсталирано от инфра-репото получава **един**
 root Application (ръчно), който сочи `apps/`. Root-ът рекурсивно открива всички
 Application-и там и ги създава. Оттам нататък всичко е GitOps — нищо не се прави
 с `kubectl` на ръка.
+
+### 5.0 CI сигурност (`repo-security.yml` + pre-commit)
+
+`.github/workflows/repo-security.yml` — на всеки PR/push: `gitleaks` (тайни) +
+`trivy` със **`scan-type: config`** (IaC misconfig върху Helm chart-овете и K8s
+манифестите), SARIF → Code Scanning, блокиране през ruleset (`Gitleaks (secrets)`
+required + „Require code scanning results", Trivy High+). `.pre-commit-config.yaml`
+(gitleaks v8.30.1) → локален gate преди commit. Идентично на infra и главния repo.
 
 ### 5.1 `bootstrap/`
 
