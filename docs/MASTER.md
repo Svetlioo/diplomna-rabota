@@ -415,6 +415,15 @@ kubernetes/helm provider-ите).
 правиш `terraform apply` на `data/` без да пипаш `aks/`. `shared` се прави първи
 (държи state storage-а), после `aks`, после `data/argocd/kyverno`.
 
+### 4.0 CI сигурност (`repo-security.yml` + pre-commit)
+
+`.github/workflows/repo-security.yml` — на всеки PR/push: `gitleaks` (тайни) +
+`trivy` със **`scan-type: config`** (IaC misconfig върху Terraform-а), и двете качват
+SARIF → GitHub Code Scanning. Блокиране като в главния repo: required check
+`Gitleaks (secrets)` + ruleset „Require code scanning results" (Trivy, High+,
+diff-aware). `.pre-commit-config.yaml` (gitleaks v8.30.1) дава локален gate преди
+commit (`pre-commit install`).
+
 ### 4.1 `shared/` — foundation
 
 **`main.tf`** — `azurerm_resource_group` „rg-diploma-shared"; `azurerm_storage_account`
@@ -480,13 +489,22 @@ diplomna-rabota-gitops/
 ├── helm-charts/     custom charts: bank-service, fraud-detection
 ├── environments/    per-env values: dev/test/prod × bank/fraud
 ├── policies/        Kyverno ClusterPolicy (Cosign verify)
-└── .github/workflows/promote.yml
+├── .github/workflows/  promote.yml + repo-security.yml
+└── .pre-commit-config.yaml  gitleaks pre-commit hook
 ```
 
 **Моделът „app-of-apps":** ArgoCD-то инсталирано от инфра-репото получава **един**
 root Application (ръчно), който сочи `apps/`. Root-ът рекурсивно открива всички
 Application-и там и ги създава. Оттам нататък всичко е GitOps — нищо не се прави
 с `kubectl` на ръка.
+
+### 5.0 CI сигурност (`repo-security.yml` + pre-commit)
+
+`.github/workflows/repo-security.yml` — на всеки PR/push: `gitleaks` (тайни) +
+`trivy` със **`scan-type: config`** (IaC misconfig върху Helm chart-овете и K8s
+манифестите), SARIF → Code Scanning, блокиране през ruleset (`Gitleaks (secrets)`
+required + „Require code scanning results", Trivy High+). `.pre-commit-config.yaml`
+(gitleaks v8.30.1) → локален gate преди commit. Идентично на infra и главния repo.
 
 ### 5.1 `bootstrap/`
 
