@@ -12,9 +12,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/auth": "http://localhost:8080",
-      "/accounts": "http://localhost:8080",
-      "/transactions": "http://localhost:8080",
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
     },
   },
 })
