@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,6 @@ type Account = { iban: string; balance: number; currency: string };
 type Transaction = { id: string; toIban: string; amount: number; currency: string };
 
 export default function App() {
-  const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [account, setAccount] = useState<Account>();
@@ -18,6 +17,20 @@ export default function App() {
   const [toIban, setToIban] = useState("");
   const [txAmount, setTxAmount] = useState("");
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
+
+  async function refresh() {
+    setAccount(await api("/accounts"));
+    setTransactions((await api("/transactions")).content ?? []);
+  }
+
+  // On load, the httpOnly cookie (if present) authenticates us, so a browser
+  // refresh restores the session instead of bouncing back to the login form.
+  useEffect(() => {
+    refresh()
+      .catch(() => undefined)
+      .finally(() => setReady(true));
+  }, []);
 
   async function run(fn: () => Promise<void>) {
     setError("");
@@ -28,34 +41,40 @@ export default function App() {
     }
   }
 
-  async function refresh(t: string) {
-    setAccount(await api("/accounts", t));
-    setTransactions((await api("/transactions", t)).content ?? []);
-  }
-
   const auth = (path: string) =>
     run(async () => {
-      const { token: t } = await api(path, undefined, { email, password });
-      setToken(t);
-      await refresh(t);
+      await api(path, { email, password });
+      setPassword("");
+      await refresh();
     });
 
   const move = (path: string) =>
     run(async () => {
-      await api(path, token, { amount: Number(amount) });
+      await api(path, { amount: Number(amount) });
       setAmount("");
-      await refresh(token);
+      await refresh();
     });
 
   const transfer = () =>
     run(async () => {
-      await api("/transactions", token, { toIban, amount: Number(txAmount) });
+      await api("/transactions", { toIban, amount: Number(txAmount) });
       setToIban("");
       setTxAmount("");
-      await refresh(token);
+      await refresh();
     });
 
-  if (!token) {
+  const logout = () =>
+    run(async () => {
+      await api("/auth/logout", {});
+      setAccount(undefined);
+      setTransactions([]);
+    });
+
+  if (!ready) {
+    return null;
+  }
+
+  if (!account) {
     return (
       <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-4 p-4">
         <Card>
@@ -86,12 +105,13 @@ export default function App() {
     <main className="mx-auto flex min-h-svh max-w-md flex-col gap-4 p-4">
       <Card>
         <CardHeader>
-          <CardTitle>{account?.iban}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>{account.iban}</CardTitle>
+            <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-3xl font-semibold">
-            {account?.balance} {account?.currency}
-          </p>
+          <p className="text-3xl font-semibold">{account.balance} {account.currency}</p>
           <div className="grid gap-2">
             <Label htmlFor="amount">Amount</Label>
             <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -111,7 +131,10 @@ export default function App() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Transactions</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Transactions</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => run(refresh)}>Refresh</Button>
+          </div>
         </CardHeader>
         <CardContent>
           <ul className="text-sm">
