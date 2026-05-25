@@ -20,19 +20,20 @@ DevSecOps реализация, която защитава софтуернат
 
 ## Сервизи
 
-- **bank-service** — Spring Boot / Java 25, една PostgreSQL база
+- **bank-service** — Spring Boot / Java 25, една PostgreSQL база; JWT auth (httpOnly cookie за браузъра + bearer header за API клиенти)
 - **fraud-detection** — Python / FastAPI, без състояние
+- **frontend** — React 19 / Vite / TypeScript / Tailwind v4 / shadcn; сервира се от nginx (non-root), който reverse-proxy-ва `/api` към bank-service
 
-И двата се build-ват от пинати официални базови образи, въртят като non-root с
+И трите се build-ват от пинати официални базови образи, въртят като non-root с
 read-only root filesystem, и се деплойват през собствени Helm charts.
 
 ---
 
 ## CI/CD поток
 
-Два service workflow-а (`bank-service-ci.yml`, `fraud-detection-ci.yml`) с еднаква
-структура, различен build stack (Maven / pip). Отделен `repo-security.yml` пуска
-repo-wide скенерите.
+Три service workflow-а (`bank-service-ci.yml`, `fraud-detection-ci.yml`,
+`frontend-ci.yml`) с еднаква структура, различен build stack (Maven / pip / Node).
+Отделен `repo-security.yml` пуска repo-wide скенерите.
 
 ### При Pull Request към `main`
 - `changes` (paths-filter) — открива кои сервизи са пипнати.
@@ -92,8 +93,13 @@ repo-wide скенерите.
 - **Подписване** — Cosign keyless (Sigstore, OIDC → Fulcio → Rekor); подпис **по digest**.
 - **SBOM** — Syft CycloneDX, закачен към образа като Cosign attestation + качен като artifact.
 - **Provenance** — `slsa-github-generator` (SLSA Level 2).
-- **Admission** — Kyverno проверява Cosign подписа (workflow самоличност + issuer + Rekor)
-  преди да допусне образ в клъстера; неподписан/подменен образ се отказва.
+- **Admission** — Kyverno налага две политики на образите в `dev/test/prod`:
+  - `verify-image-signatures` — валиден Cosign подпис (workflow самоличност + issuer + Rekor)
+    **плюс** SLSA provenance атестация (подписана от `slsa-github-generator`) **плюс**
+    CycloneDX SBOM атестация (подписана от CI). Липсва ли подпис или атестация → отказан.
+  - `restrict-image-registries` — допуска **само** образи от `ghcr.io/svetlioo/*`; всеки образ
+    от чуждо registry (напр. `docker.io/...`) се отказва. (verify-images проверява само
+    съвпадащите образи, затова рестрикцията на registry е **отделен** контрол.)
 
 ---
 
@@ -119,7 +125,10 @@ gitops репозиторито.
 - **Branch ruleset** на `main`: изисквай PR, изисквай status checks, изисквай
   „code scanning results" (Trivy + Semgrep, праг *High or higher*), блокирай force push.
 - **Secret scanning + Push protection** (безплатно за публични repos).
-- Secret **`GITOPS_TOKEN`** (fine-grained PAT) за dev авто-деплоя.
+- Secret **`GITOPS_TOKEN`** (fine-grained PAT, Contents + Pull requests = write върху gitops)
+  в **двете** репота: в `diplomna-rabota` за dev авто-деплоя, и в `diplomna-rabota-gitops`
+  за Promote workflow-а — PR, отворен с `GITHUB_TOKEN`, **не** тригерира checks, затова
+  промоцията ползва PAT, за да минават required checks.
 - В gitops репото: разреши на GitHub Actions да създава PR-и (за Promote workflow-а).
 
 ---
