@@ -9,6 +9,7 @@ type Account = { iban: string; balance: number; currency: string };
 type Transaction = { id: string; toIban: string; amount: number; currency: string };
 
 export default function App() {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [account, setAccount] = useState<Account>();
@@ -75,11 +76,12 @@ export default function App() {
   }
 
   if (!account) {
+    const isLogin = mode === "login";
     return (
       <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-4 p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Bank</CardTitle>
+            <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-2">
@@ -90,10 +92,17 @@ export default function App() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => auth("/auth/login")}>Login</Button>
-              <Button className="flex-1" variant="outline" onClick={() => auth("/auth/register")}>Register</Button>
-            </div>
+            <Button onClick={() => auth(`/auth/${mode}`)}>{isLogin ? "Login" : "Register"}</Button>
+            <Button
+              variant="link"
+              className="h-auto p-0 text-muted-foreground"
+              onClick={() => {
+                setMode(isLogin ? "register" : "login");
+                setError("");
+              }}
+            >
+              {isLogin ? "Need an account? Register" : "Have an account? Login"}
+            </Button>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
@@ -138,12 +147,17 @@ export default function App() {
         </CardHeader>
         <CardContent>
           <ul className="text-sm">
-            {transactions.map((t) => (
-              <li key={t.id} className="flex justify-between border-b py-1">
-                <span>{t.toIban}</span>
-                <span>{t.amount} {t.currency}</span>
-              </li>
-            ))}
+            {transactions.map((t) => {
+              const incoming = t.toIban === account.iban;
+              return (
+                <li key={t.id} className="flex justify-between border-b py-1">
+                  <span>{incoming ? "Received" : `Sent to ${t.toIban}`}</span>
+                  <span className={incoming ? "text-green-600" : "text-destructive"}>
+                    {incoming ? "+" : "-"}{t.amount} {t.currency}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </CardContent>
       </Card>
