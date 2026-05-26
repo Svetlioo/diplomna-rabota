@@ -11,5 +11,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Page<Transaction> findByOwnerId(UUID ownerId, Pageable pageable);
 
+    // The caller's full ledger: transfers they sent (ownerId) plus transfers
+    // they received (their IBAN as the destination).
+    Page<Transaction> findByOwnerIdOrToIban(UUID ownerId, String toIban, Pageable pageable);
+
     Optional<Transaction> findByIdAndOwnerId(UUID id, UUID ownerId);
 }
