@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 type Account = { iban: string; balance: number; currency: string };
 type Transaction = { id: string; toIban: string; amount: number; currency: string };
 
-// frontend-diploma-dev.polandcentral.cloudapp.azure.com -> DEV; localhost -> LOCAL.
-const ENV = (location.hostname.match(/^frontend-diploma-(\w+)\./)?.[1] ?? "local").toUpperCase();
+// Pod serves /env.json from a per-env ConfigMap; falls back to LOCAL during `vite dev`.
 const ENV_COLOR: Record<string, string> = {
   DEV: "bg-blue-100 text-blue-700",
   TEST: "bg-amber-100 text-amber-700",
@@ -17,9 +16,18 @@ const ENV_COLOR: Record<string, string> = {
 };
 
 export default function App() {
+  const [env, setEnv] = useState("LOCAL");
+
   useEffect(() => {
-    document.title = `Bank — ${ENV}`;
+    fetch("/env.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.env && setEnv(String(d.env).toUpperCase()))
+      .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    document.title = `Bank — ${env}`;
+  }, [env]);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,7 +102,7 @@ export default function App() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[ENV] ?? "bg-muted text-muted-foreground"}`}>{ENV}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -131,7 +139,7 @@ export default function App() {
           <div className="flex items-center justify-between">
             <CardTitle>{account.iban}</CardTitle>
             <div className="flex items-center gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[ENV] ?? "bg-muted text-muted-foreground"}`}>{ENV}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
               <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
             </div>
           </div>
