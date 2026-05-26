@@ -1,3 +1,5 @@
+"""Rule-based fraud screening for the diploma banking demo."""
+
 import os
 
 from fastapi import FastAPI
