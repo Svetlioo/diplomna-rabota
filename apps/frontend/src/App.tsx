@@ -8,7 +8,26 @@ import { Label } from "@/components/ui/label";
 type Account = { iban: string; balance: number; currency: string };
 type Transaction = { id: string; toIban: string; amount: number; currency: string };
 
+// Pod serves /env.json from a per-env ConfigMap; falls back to LOCAL during `vite dev`.
+const ENV_COLOR: Record<string, string> = {
+  DEV: "bg-blue-100 text-blue-700",
+  TEST: "bg-amber-100 text-amber-700",
+  PROD: "bg-emerald-100 text-emerald-700",
+};
+
 export default function App() {
+  const [env, setEnv] = useState("LOCAL");
+
+  useEffect(() => {
+    fetch("/env.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.env && setEnv(String(d.env).toUpperCase()))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    document.title = `Bank — ${env}`;
+  }, [env]);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,7 +100,10 @@ export default function App() {
       <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-4 p-4">
         <Card>
           <CardHeader>
-            <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-2">
@@ -116,7 +138,10 @@ export default function App() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>{account.iban}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
+              <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
