@@ -60,10 +60,29 @@ kubectl -n kyverno get pods
 kubectl get clusterpolicyreports
 kubectl get policyreports -A
 
-# Live негативен тест — чужд registry се отказва
-kubectl -n dev run rogue --image=docker.io/nginx:latest --dry-run=server
-# → admission webhook "validate.kyverno.svc-fail" denied:
+# Live негативен тест 1 — чужд registry се отказва
+kubectl -n dev run rogue-registry --image=docker.io/nginx:latest
+# → Error from server: admission webhook "validate.kyverno.svc-fail" denied:
 #   restrict-image-registries: image must be from ghcr.io/svetlioo/*
+
+# Live негативен тест 2 — образ от НАШЕТО registry, но НЕподписан
+# (push-ваме alpine под наш репо name, БЕЗ cosign sign)
+echo $GITHUB_PAT | docker login ghcr.io -u svetlioo --password-stdin
+docker pull alpine:3.22
+docker tag alpine:3.22 ghcr.io/svetlioo/unsigned-test:demo
+docker push ghcr.io/svetlioo/unsigned-test:demo
+kubectl -n dev run rogue-unsigned --image=ghcr.io/svetlioo/unsigned-test:demo
+# → Error from server: admission webhook "validate.kyverno.svc-fail" denied:
+#   verify-image-signatures: .attestors[0]: no signatures found
+
+# Положителен контрол — реален подписан образ минава
+IMG=$(yq '.image.repository + ":" + .image.tag + "@" + .image.digest' \
+      ../diplomna-rabota-gitops/environments/dev/values-bank.yaml)
+kubectl -n dev run bank-canary --image="$IMG"
+# → pod/bank-canary created
+
+# Почистване
+kubectl -n dev delete pod rogue-registry rogue-unsigned bank-canary --ignore-not-found
 ```
 
 ## 4. Подове и какво има в клъстера
