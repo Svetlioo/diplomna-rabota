@@ -1,4 +1,4 @@
-"""Rule-based fraud screening for the diploma banking demo."""
+"""Rule-based fraud screening service for the diploma banking demo."""
 
 import os
 
