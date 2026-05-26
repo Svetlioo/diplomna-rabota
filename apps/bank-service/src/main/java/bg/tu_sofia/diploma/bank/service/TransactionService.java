@@ -42,6 +42,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public Page<Transaction> getOwnTransactions(UUID ownerId, Pageable pageable) {
-        return transactionRepository.findByOwnerId(ownerId, pageable);
+        String iban = accountService.getOwnAccount(ownerId).getIban();
+        return transactionRepository.findByOwnerIdOrToIban(ownerId, iban, pageable);
     }
 }
