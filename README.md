@@ -6,8 +6,9 @@ DevSecOps реализация, която защитава софтуернат
 
 Това хранилище съдържа изходния код на сервизите, техните Dockerfile-и и CI/CD
 процеса в GitHub Actions. Акцентът е върху сигурната доставка (сканиране,
-подписване, SBOM, provenance, контролиран GitOps деплой), а не върху бизнес
-логиката на приложението. Целевото ниво на интегритет на веригата е SLSA Level 2.
+подписване, SBOM, provenance, контролирано внедряване през GitOps), а не върху
+бизнес логиката на приложението. Целевото ниво на интегритет на веригата е
+SLSA Level 2.
 
 ## Трите хранилища
 
@@ -23,11 +24,42 @@ DevSecOps реализация, която защитава софтуернат
   httpOnly cookie за браузъра и bearer header за API клиенти.
 - `fraud-detection` (Python, FastAPI). Без състояние, без база. Правило-базирана
   проверка на превод преди изпълнението му.
-- `frontend` (React 19, Vite, TypeScript, Tailwind v4, shadcn). Сервира се от
-  nginx като non-root и reverse-proxy-ва `/api` към bank-service.
+- `frontend` (React 19, Vite, TypeScript, Tailwind v4, shadcn). Статичен build,
+  сервиран в контейнера; заявките към `/api` се пренасочват към bank-service.
 
 Трите образа се изграждат от пинати официални базови образи, въртят като non-root
-с read-only root filesystem и се деплойват през собствени Helm charts.
+с read-only root filesystem и се внедряват през собствени Helm charts.
+
+## Локално пускане
+
+Нужни са Docker, JDK 25 и Node 22.
+
+1. Копирай примерните променливи и попълни стойностите:
+   ```bash
+   cp .env.example .env
+   ```
+   Задай `BANK_DB_USER`, `BANK_DB_PASSWORD`, `DB_USERNAME`, `DB_PASSWORD` (същите
+   като на базата) и `JWT_SECRET` (`openssl rand -hex 32`).
+
+2. Вдигни базата и fraud-detection:
+   ```bash
+   docker compose up -d
+   ```
+   Postgres слуша на 5432, fraud-detection на 8000.
+
+3. Пусни bank-service:
+   ```bash
+   cd apps/bank-service && ./mvnw spring-boot:run
+   ```
+   Слуша на 8080.
+
+4. Пусни frontend:
+   ```bash
+   cd apps/frontend && npm install && npm run dev
+   ```
+   Vite слуша на 5173 и проксира `/api` към bank-service на 8080.
+
+Отвори `http://localhost:5173`.
 
 ## CI/CD поток
 
@@ -41,14 +73,14 @@ DevSecOps реализация, която защитава софтуернат
   само за валидация, че Dockerfile-ът работи). Образът не се публикува на PR.
 - `repo-security` винаги пуска Gitleaks, Semgrep и Trivy върху цялото хранилище и
   качва резултатите в GitHub Code Scanning.
-- Резултатите от скановете решават дали merge е разрешен.
+- Резултатите от скановете решават дали сливането е разрешено.
 
-**При push към `main` (след merge):**
+**При push към `main` (след сливане):**
 - За засегнатия сервиз: `image` изгражда образа, публикува го в `ghcr.io`,
   подписва го с Cosign, генерира SBOM (Syft) и SLSA provenance.
 - `deploy-dev` обновява dev средата в gitops хранилището.
 
-## Сигурностни сканове
+## Сигурностни сканирания
 
 | Скенер | Какво хваща |
 |---|---|
@@ -66,7 +98,7 @@ Scanning. Блокирането е diff-aware: преценява се спря
 
 Тайните се хващат на три нива: локално преди commit (`pre-commit` + gitleaks),
 при push (GitHub Push Protection отказва самия `git push`) и в CI (Gitleaks job
-блокира merge и записва находката в Security tab). Активиране на локалната
+блокира сливането и записва находката в Security tab). Активиране на локалната
 проверка веднъж след клониране: `pre-commit install`.
 
 ## Supply chain сигурност
@@ -83,22 +115,23 @@ Scanning. Блокирането е diff-aware: преценява се спря
     Липсва ли подпис или attestation, образът се отказва.
   - `restrict-image-registries` допуска само образи от `ghcr.io/svetlioo/*`.
     verify-images проверява само съвпадащите образи, затова рестрикцията на
-    registry е отделен контрол.
+    регистъра е отделен контрол.
 
-## Деплой (GitOps)
+## Внедряване (GitOps)
 
 Клъстерът (AKS) има среди `dev`, `test` и `prod`, реконсилирани от ArgoCD от
 gitops хранилището.
 
-- Деплойва се само засегнатият сервиз. Промяна в два сервиза изисква два отделни
+- Внедрява се само засегнатият сервиз. Промяна в два сервиза изисква два отделни
   PR-а, по един за всеки.
-- Деплойте са сериализирани (обща `concurrency` група), за да чете всеки
+- Внедряванията са сериализирани (обща `concurrency` група), за да чете всяко
   най-новия `main` без конфликти.
-- `dev` е автоматично: CI отваря и авто-merge-ва PR в gitops с новия образ.
-- `test` и `prod` са ръчни: Promote workflow в gitops отваря PR, който човек
-  одобрява (separation of duties). prod винаги взима test-валидирания образ.
+- `dev` е автоматично: CI отваря и авто-слива PR в gitops с новия образ.
+- `test` и `prod` са ръчни: придвижването става през Promote workflow в gitops,
+  който отваря PR за одобрение от човек (separation of duties). prod винаги взима
+  test-валидирания образ.
 
-Всяка среда пинва едновременно tag (четимост) и digest (неизменност).
+Всяка среда пинва едновременно таг (четимост) и digest (неизменност).
 
 ## Настройка на хранилището (еднократно)
 
@@ -106,9 +139,9 @@ gitops хранилището.
   (Trivy и Semgrep, праг High or higher), блокирай force push.
 - Secret scanning и Push protection (безплатно за публични хранилища).
 - Secret `GITOPS_TOKEN` (fine-grained PAT, Contents и Pull requests write върху
-  gitops) в двете хранилища: в `diplomna-rabota` за dev авто-деплоя и в
+  gitops) в двете хранилища: в `diplomna-rabota` за dev авто-внедряването и в
   `diplomna-rabota-gitops` за Promote workflow-а. PR, отворен с `GITHUB_TOKEN`, не
-  тригерира checks, затова промоцията ползва PAT.
+  тригерира checks, затова придвижването ползва PAT.
 - В gitops хранилището разреши на GitHub Actions да създава PR-и.
 
 ## Лиценз
