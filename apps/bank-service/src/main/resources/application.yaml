@@ -3,10 +3,10 @@ spring:
     name: bank-service
   # Local-dev convenience: load env vars from the monorepo root .env file.
   # Searched at several levels up so it resolves regardless of the working
-  # directory (service dir, apps/, or repo root — terminal or IDE). The
-  # `optional:` prefix means each path is silently skipped if absent — which
-  # is the case in CI and production, where DB_URL/USERNAME/PASSWORD are
-  # injected by the runtime (GitHub Actions secrets, Kubernetes secrets).
+  # directory (service dir, apps/, or repo root). The `optional:` prefix lets
+  # each path be skipped if absent, as in CI and production, where
+  # DB_URL/USERNAME/PASSWORD are injected by the runtime (GitHub Actions
+  # secrets, Kubernetes secrets).
   config:
     import:
       - "optional:file:.env[.properties]"
@@ -31,7 +31,7 @@ spring:
     clean-disabled: ${FLYWAY_CLEAN_DISABLED:true}
 
 # Local-dev only: wipe + re-migrate on startup (see FlywayDevConfig). Off by
-# default; turned on via .env. Never set this in Kubernetes — it drops all data.
+# default; turned on via .env. Never set this in Kubernetes, it drops all data.
 app:
   db:
     clean-on-start: ${APP_DB_CLEAN_ON_START:false}
