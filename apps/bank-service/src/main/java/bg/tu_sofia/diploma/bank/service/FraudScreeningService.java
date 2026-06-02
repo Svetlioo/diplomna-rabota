@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Screens a transfer against the fraud-detection service BEFORE it is executed,
  * so a flagged transfer is blocked and the money never moves. fraud-detection is
- * stateless: it receives the transfer in the request and returns a verdict — it
+ * stateless: it receives the transfer in the request and returns a verdict. It
  * never touches this service's database. A flagged transfer also freezes the
  * source account (this service is the only writer of its data), blocking further
  * activity. The fraud call is made outside any money-movement transaction, and
