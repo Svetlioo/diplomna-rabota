@@ -10,7 +10,7 @@ from pydantic import BaseModel
 # request the bank-service sends.
 AMOUNT_THRESHOLD = float(os.getenv("FRAUD_AMOUNT_THRESHOLD", "10000"))
 
-app = FastAPI(title="fraud-detection", version="0.0.1")
+app = FastAPI(title="fraud-detection", version="0.0.2")
 
 
 class EvaluateRequest(BaseModel):
