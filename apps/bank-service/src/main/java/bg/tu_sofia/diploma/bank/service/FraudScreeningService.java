@@ -1,5 +1,6 @@
 package bg.tu_sofia.diploma.bank.service;
 
+import bg.tu_sofia.diploma.bank.exception.FraudScreeningUnavailableException;
 import bg.tu_sofia.diploma.bank.exception.SuspiciousTransferException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,15 +10,7 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * Screens a transfer against the fraud-detection service BEFORE it is executed,
- * so a flagged transfer is blocked and the money never moves. fraud-detection is
- * stateless: it receives the transfer in the request and returns a verdict. It
- * never touches this service's database. A flagged transfer also freezes the
- * source account (this service is the only writer of its data), blocking further
- * activity. The fraud call is made outside any money-movement transaction, and
- * failures are swallowed (fail-open): a fraud outage must not break payments.
- */
+// Screens a transfer before it executes; freezes the account if flagged, blocks if screening is unavailable.
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -27,25 +20,29 @@ public class FraudScreeningService {
     private final AccountService accountService;
 
     public void check(UUID ownerId, String toIban, BigDecimal amount) {
-        if (isSuspicious(ownerId, toIban, amount)) {
+        if (evaluate(ownerId, toIban, amount).suspicious()) {
             accountService.freeze(ownerId);
             log.warn("Transfer from account owner {} blocked and account frozen by fraud-detection", ownerId);
             throw new SuspiciousTransferException();
         }
     }
 
-    private boolean isSuspicious(UUID ownerId, String toIban, BigDecimal amount) {
+    private Verdict evaluate(UUID ownerId, String toIban, BigDecimal amount) {
+        Verdict verdict;
         try {
-            Verdict verdict = fraudRestClient.post()
+            verdict = fraudRestClient.post()
                     .uri("/evaluate")
                     .body(new EvaluateRequest(ownerId, toIban, amount))
                     .retrieve()
                     .body(Verdict.class);
-            return verdict != null && verdict.suspicious();
         } catch (Exception e) {
-            log.warn("Fraud screening unavailable, allowing transfer: {}", e.getMessage());
-            return false;
+            log.warn("Fraud screening unavailable, blocking transfer: {}", e.getMessage());
+            throw new FraudScreeningUnavailableException();
         }
+        if (verdict == null) {
+            throw new FraudScreeningUnavailableException();
+        }
+        return verdict;
     }
 
     private record EvaluateRequest(UUID ownerId, String toIban, BigDecimal amount) {
