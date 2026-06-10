@@ -49,7 +49,7 @@ jobs:
         run: python -c "import app.main"
 
   image:
-    name: Build & scan container image
+    name: Build & publish container image
     runs-on: ubuntu-latest
     needs: [changes, build-test]
     if: needs.changes.outputs.fraud == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -73,7 +73,7 @@ jobs:
       - name: Compute image tag
         id: ver
         run: |
-          version=0.0.1
+          version=$(grep -oE 'version="[0-9.]+"' app/main.py | grep -oE '[0-9.]+')
           short_sha=${GITHUB_SHA::7}
           echo "tag=${version}-build.${{ github.run_number }}-${short_sha}" >> "$GITHUB_OUTPUT"
 
@@ -97,7 +97,7 @@ jobs:
             type=raw,value=${{ steps.ver.outputs.tag }}
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build image (load locally for scanning)
+      - name: Build image
         uses: docker/build-push-action@v7.1.0
         with:
           context: apps/fraud-detection
