@@ -35,10 +35,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Stateless JWT API. The token rides in an Authorization header
-                // (API clients) or an httpOnly SameSite=Strict cookie (browser);
-                // SameSite=Strict is what guards the cookie path against CSRF, so
-                // there is no server-side CSRF token to protect.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -51,8 +47,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Reads the bearer token from the Authorization header, falling back to the
-    // "token" cookie so the browser SPA never has to handle the JWT in JS.
     private BearerTokenResolver cookieOrHeaderBearerTokenResolver() {
         DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
         return request -> {

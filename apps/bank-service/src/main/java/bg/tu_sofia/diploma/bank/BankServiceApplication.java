@@ -8,8 +8,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableJpaAuditing
 public class BankServiceApplication {
 
-	// Entry point for the bank-service Spring Boot application.
-
 	public static void main(String[] args) {
 		SpringApplication.run(BankServiceApplication.class, args);
 	}

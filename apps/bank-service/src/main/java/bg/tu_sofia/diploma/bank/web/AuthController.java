@@ -47,8 +47,7 @@ public class AuthController {
                 .build();
     }
 
-    // Returns the token in the body (for API clients) and as an httpOnly cookie
-    // (for the browser, which then never touches the JWT in JS).
+    // Token in the body (API clients) + httpOnly cookie (browser).
     private ResponseEntity<TokenResponse> tokenResponse(String token, HttpStatus status) {
         return ResponseEntity.status(status)
                 .header(HttpHeaders.SET_COOKIE, tokenCookie(token, tokenTtl).toString())

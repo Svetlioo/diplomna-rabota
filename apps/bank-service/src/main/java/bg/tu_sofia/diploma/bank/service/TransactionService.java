@@ -21,13 +21,7 @@ public class TransactionService {
     private final AccountService accountService;
     private final TransactionRepository transactionRepository;
 
-    /**
-     * Performs a transfer from the caller's account to {@code toIban} and records
-     * it, all in one transaction: the money movement (debit + credit, both rows
-     * locked) and the ledger insert either both commit or both roll back. Only
-     * successful transfers are recorded. On failure the money move throws, the
-     * transaction rolls back, and no ledger row is written.
-     */
+    // Money move + ledger insert in one transaction (both or neither).
     @Transactional
     public Transaction transfer(UUID ownerId, String toIban, BigDecimal amount) {
         accountService.transfer(ownerId, toIban, amount);

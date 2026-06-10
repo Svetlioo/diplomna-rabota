@@ -17,11 +17,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     Optional<Account> findByIban(String iban);
 
-    /**
-     * Loads an account by id with a row-level write lock (SELECT ... FOR UPDATE),
-     * blocking any concurrent transaction from reading-for-update or writing the
-     * same row until this transaction commits.
-     */
+    // Row-level write lock (SELECT ... FOR UPDATE).
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.id = :id")
     Optional<Account> findByIdForUpdate(@Param("id") UUID id);

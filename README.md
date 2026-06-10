@@ -107,7 +107,8 @@ Scanning. Блокирането е diff-aware: преценява се спря
   digest.
 - SBOM: Syft в CycloneDX формат, закачен към образа като Cosign attestation и
   качен като artifact.
-- Provenance: `slsa-github-generator`, което постига SLSA Level 2.
+- Provenance: `slsa-github-generator` издава подписана SLSA provenance attestation,
+  която документира от кое хранилище, кой commit и кой workflow е изграден образът.
 - Admission: Kyverno налага две политики на образите в `dev`, `test` и `prod`:
   - `verify-image-signatures` изисква валиден Cosign подпис (workflow самоличност,
     issuer и Rekor), плюс SLSA provenance attestation (подписана от

@@ -4,6 +4,7 @@ import bg.tu_sofia.diploma.bank.exception.AccountFrozenException;
 import bg.tu_sofia.diploma.bank.exception.AccountNotFoundException;
 import bg.tu_sofia.diploma.bank.exception.CurrencyMismatchException;
 import bg.tu_sofia.diploma.bank.exception.EmailAlreadyExistsException;
+import bg.tu_sofia.diploma.bank.exception.FraudScreeningUnavailableException;
 import bg.tu_sofia.diploma.bank.exception.InsufficientFundsException;
 import bg.tu_sofia.diploma.bank.exception.InvalidCredentialsException;
 import bg.tu_sofia.diploma.bank.exception.SameAccountTransferException;
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSuspicious(SuspiciousTransferException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ErrorResponse.of("SUSPICIOUS_TRANSFER", ex.getMessage()));
+    }
+
+    @ExceptionHandler(FraudScreeningUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleFraudUnavailable(FraudScreeningUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of("FRAUD_SCREENING_UNAVAILABLE", ex.getMessage()));
     }
 
     @ExceptionHandler(InsufficientFundsException.class)

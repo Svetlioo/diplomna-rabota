@@ -30,11 +30,7 @@ public class AuthService {
     @Value("${security.jwt.ttl:PT12H}")
     private Duration tokenTtl;
 
-    /**
-     * Registers a user and opens their single account in the same transaction,
-     * so a registered user always has exactly one account and there is no
-     * separate "create account" step. Either both are persisted or neither is.
-     */
+    // User + their account in one transaction.
     @Transactional
     public String register(String email, String rawPassword) {
         if (userRepository.existsByEmail(email)) {
