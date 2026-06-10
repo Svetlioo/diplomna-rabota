@@ -5,11 +5,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 
-/**
- * Generates Bulgarian (BG) IBANs with valid ISO 13616 check digits. The BBAN is
- * a fixed demo bank code ("DIPL") followed by 14 random digits, so the result is
- * a well-formed 22-character IBAN that passes MOD-97 validation.
- */
+// Bulgarian IBAN with valid ISO 13616 (MOD-97) check digits.
 @Component
 public class IbanGenerator {
 
@@ -29,8 +25,7 @@ public class IbanGenerator {
     }
 
     private String checkDigits(String bban) {
-        // ISO 13616: append country code + "00", convert letters to numbers,
-        // then the check digits are 98 - (number mod 97).
+        // ISO 13616: check digits = 98 - (rearranged mod 97).
         String rearranged = numeric(bban + COUNTRY_CODE + "00");
         int remainder = new BigInteger(rearranged).mod(MOD).intValue();
         int check = 98 - remainder;

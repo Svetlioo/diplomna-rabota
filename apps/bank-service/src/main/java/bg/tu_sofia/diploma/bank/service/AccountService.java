@@ -21,11 +21,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final IbanGenerator ibanGenerator;
 
-    /**
-     * Opens a user's single account at registration time. The owner is the newly
-     * registered user, so a user always has exactly one account; the one-per-user
-     * invariant is guaranteed by the UNIQUE constraint on accounts.owner_id.
-     */
+    // One account per user (UNIQUE on owner_id).
     @Transactional
     public Account openForOwner(UUID ownerId) {
         return accountRepository.save(Account.open(ownerId, uniqueIban()));
@@ -63,14 +59,7 @@ public class AccountService {
         return accountRepository.save(account);
     }
 
-    /**
-     * Moves money from the caller's account to the account with {@code toIban}.
-     * The source is always the caller's own account (resolved from the
-     * authenticated identity), so a user can never debit someone else's account.
-     * Both rows are locked with SELECT ... FOR UPDATE in id order and the debit +
-     * credit happen in one transaction, so either both sides change or neither
-     * does, and two concurrent transfers over the same pair cannot deadlock.
-     */
+    // Locks both rows in id order, then debits + credits in one transaction.
     @Transactional
     public void transfer(UUID ownerId, String toIban, BigDecimal amount) {
         UUID fromId = accountRepository.findByOwnerId(ownerId)

@@ -5,9 +5,7 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-# A transfer at or above this amount is flagged as suspicious. Rule-based only:
-# no model, no state, no database. The verdict is computed purely from the
-# request the bank-service sends.
+# Transfers at or above this amount are flagged. Rule-based: no model, no state, no DB.
 AMOUNT_THRESHOLD = float(os.getenv("FRAUD_AMOUNT_THRESHOLD", "10000"))
 
 app = FastAPI(title="fraud-detection", version="0.0.2")

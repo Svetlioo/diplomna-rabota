@@ -7,13 +7,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * Use-case orchestration for making a payment: screen first, then execute. It is
- * deliberately NOT transactional: the fraud call must stay outside the money
- * movement, and a flagged transfer is rejected before any transaction is opened.
- * The actual debit + credit + ledger insert happen atomically inside
- * {@link TransactionService#transfer}.
- */
+// Screen first, then transfer. Not @Transactional: the fraud call stays outside the money move.
 @Service
 @RequiredArgsConstructor
 public class PaymentService {

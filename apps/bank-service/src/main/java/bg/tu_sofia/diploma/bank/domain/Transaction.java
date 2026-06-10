@@ -15,12 +15,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Ledger entry for a completed transfer. Only successful transfers are recorded
- * (failures surface as HTTP errors), so there is no status field. The row is
- * written in the same transaction as the money movement, so it can never exist
- * without the money having actually moved.
- */
+// Ledger entry for a completed transfer (only successes are recorded).
 @Entity
 @Table(name = "transactions")
 @EntityListeners(AuditingEntityListener.class)

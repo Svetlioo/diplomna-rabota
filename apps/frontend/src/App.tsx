@@ -6,9 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type Account = { iban: string; balance: number; currency: string };
-type Transaction = { id: string; toIban: string; amount: number; currency: string };
+type Transaction = {
+  id: string;
+  toIban: string;
+  amount: number;
+  currency: string;
+};
 
-// Pod serves /env.json from a per-env ConfigMap; falls back to LOCAL during `vite dev`.
+// Pod serves /env.json from a per-env ConfigMap, falls back to LOCAL during `vite dev`.
 const ENV_COLOR: Record<string, string> = {
   DEV: "bg-blue-100 text-blue-700",
   TEST: "bg-amber-100 text-amber-700",
@@ -26,7 +31,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = `Bank — ${env}`;
+    document.title = `Bank - ${env}`;
   }, [env]);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -44,8 +49,7 @@ export default function App() {
     setTransactions((await api("/transactions")).content ?? []);
   }
 
-  // On load, the httpOnly cookie (if present) authenticates us, so a browser
-  // refresh restores the session instead of bouncing back to the login form.
+  // The httpOnly cookie restores the session on refresh.
   useEffect(() => {
     refresh()
       .catch(() => undefined)
@@ -102,19 +106,34 @@ export default function App() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}
+              >
+                {env}
+              </span>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-            <Button onClick={() => auth(`/auth/${mode}`)}>{isLogin ? "Login" : "Register"}</Button>
+            <Button onClick={() => auth(`/auth/${mode}`)}>
+              {isLogin ? "Login" : "Register"}
+            </Button>
             <Button
               variant="link"
               className="h-auto p-0 text-muted-foreground"
@@ -139,25 +158,59 @@ export default function App() {
           <div className="flex items-center justify-between">
             <CardTitle>{account.iban}</CardTitle>
             <div className="flex items-center gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}>{env}</span>
-              <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${ENV_COLOR[env] ?? "bg-muted text-muted-foreground"}`}
+              >
+                {env}
+              </span>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                Logout
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-3xl font-semibold">{account.balance} {account.currency}</p>
+          <p className="text-3xl font-semibold">
+            {account.balance} {account.currency}
+          </p>
           <div className="grid gap-2">
             <Label htmlFor="amount">Amount</Label>
-            <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input
+              id="amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => move("/accounts/deposit")}>Deposit</Button>
-              <Button className="flex-1" variant="outline" onClick={() => move("/accounts/withdraw")}>Withdraw</Button>
+              <Button
+                className="flex-1"
+                onClick={() => move("/accounts/deposit")}
+              >
+                Deposit
+              </Button>
+              <Button
+                className="flex-1"
+                variant="outline"
+                onClick={() => move("/accounts/withdraw")}
+              >
+                Withdraw
+              </Button>
             </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="iban">Transfer</Label>
-            <Input id="iban" placeholder="recipient IBAN" value={toIban} onChange={(e) => setToIban(e.target.value)} />
-            <Input type="number" placeholder="amount" value={txAmount} onChange={(e) => setTxAmount(e.target.value)} />
+            <Input
+              id="iban"
+              placeholder="recipient IBAN"
+              value={toIban}
+              onChange={(e) => setToIban(e.target.value)}
+            />
+            <Input
+              type="number"
+              placeholder="amount"
+              value={txAmount}
+              onChange={(e) => setTxAmount(e.target.value)}
+            />
             <Button onClick={transfer}>Send</Button>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -167,7 +220,9 @@ export default function App() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Transactions</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => run(refresh)}>Refresh</Button>
+            <Button variant="outline" size="sm" onClick={() => run(refresh)}>
+              Refresh
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -177,8 +232,11 @@ export default function App() {
               return (
                 <li key={t.id} className="flex justify-between border-b py-1">
                   <span>{incoming ? "Received" : `Sent to ${t.toIban}`}</span>
-                  <span className={incoming ? "text-green-600" : "text-destructive"}>
-                    {incoming ? "+" : "-"}{t.amount} {t.currency}
+                  <span
+                    className={incoming ? "text-green-600" : "text-destructive"}
+                  >
+                    {incoming ? "+" : "-"}
+                    {t.amount} {t.currency}
                   </span>
                 </li>
               );
