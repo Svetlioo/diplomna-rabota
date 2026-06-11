@@ -32,20 +32,28 @@ non-root с read-only root filesystem и се внедряват през соб
 
 Нужни са Docker, JDK 25 и Node 22.
 
-1. Копирай примерните променливи и попълни стойностите:
+1. Копирай примерните променливи:
    ```bash
    cp .env.example .env
    ```
-   Задай `BANK_DB_USER`, `BANK_DB_PASSWORD`, `DB_USERNAME`, `DB_PASSWORD` (същите
-   като на базата) и `JWT_SECRET` (`openssl rand -hex 32`).
+   В `.env` попълни:
+   - `BANK_DB_USER` и `BANK_DB_PASSWORD`: потребител и парола за контейнера с
+     базата (docker compose ги подава на PostgreSQL).
+   - `DB_USERNAME` и `DB_PASSWORD`: същите стойности; с тях bank-service се
+     свързва към базата.
+   - `JWT_SECRET`: генерирай с `openssl rand -hex 32`.
+
+   Останалите (`BANK_DB_NAME`, `BANK_DB_PORT`, `DB_URL`, `FRAUD_URL`,
+   `FRAUD_AMOUNT_THRESHOLD`) имат готови стойности и не се пипат.
 
 2. Вдигни базата и fraud-detection:
    ```bash
    docker compose up -d
    ```
-   PostgreSQL слуша на 5432, fraud-detection на 8000.
+   PostgreSQL тръгва на 5432, fraud-detection на 8000 (изгражда се от
+   `apps/fraud-detection`).
 
-3. Пусни bank-service:
+3. Пусни bank-service (чете `.env` автоматично, Flyway създава схемата):
    ```bash
    cd apps/bank-service && ./mvnw spring-boot:run
    ```
@@ -55,7 +63,8 @@ non-root с read-only root filesystem и се внедряват през соб
    ```bash
    cd apps/frontend && npm install && npm run dev
    ```
-   Отвори `http://localhost:5173`; Vite проксира `/api` към bank-service.
+   Отвори `http://localhost:5173`. Vite dev сървърът пренасочва заявките от
+   `/api` към bank-service на порт 8080.
 
 ## CI/CD поток
 
@@ -84,9 +93,8 @@ provenance (slsa-github-generator), а `deploy-dev` обновява dev сре�
 въведен в самия PR; стар проблем, който вече е на `main`, се вижда в Security
 tab, но не блокира несвързани PR-и.
 
-Тайните се хващат на три нива: локално преди commit (`pre-commit install`
-еднократно след клониране), при push (GitHub Push Protection) и в CI (Gitleaks
-блокира сливането).
+Тайните се хващат на две нива: локално преди commit (`pre-commit install`
+еднократно след клониране) и в CI (Gitleaks блокира сливането).
 
 ## Supply chain сигурност
 
@@ -109,11 +117,13 @@ digest. Придвижването към `test` и `prod` е ръчно пре�
 
 ## Настройка на хранилището (еднократно)
 
-- Branch ruleset на `main`: изисква pull request, status checks и code scanning
-  results; забранен force push.
-- Secret scanning и Push Protection включени.
+- Branch ruleset на `main`: изисква pull request и преминали status checks
+  (Build & test, Gitleaks (secrets), Semgrep (SAST), Build & publish container
+  image), плюс code scanning results (Gitleaks, Semgrep, Trivy с праг High or
+  higher); забранен директен push.
 - Secret `GITOPS_TOKEN` (fine-grained PAT с Contents и Pull requests write върху
   gitops хранилището) за автоматичния dev pull request.
+- Gitleaks hook за тайни (еднократно след клониране): `pre-commit install`
 
 ## Лиценз
 
