@@ -1,8 +1,7 @@
 # Защита на софтуерната верига за доставки
 
 DevSecOps реализация, която защитава софтуерната верига за доставки на
-контейнеризирано банково приложение в Kubernetes. Бакалавърска дипломна работа,
-ТУ София, специалност Киберсигурност.
+контейнеризирано банково приложение в Kubernetes.
 
 Това хранилище съдържа изходния код на услугите, техните Dockerfile файлове и
 CI/CD процеса в GitHub Actions. Акцентът е върху сигурната доставка чрез
@@ -22,7 +21,7 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 .
 ├── apps/                      трите микроуслуги
 │   ├── bank-service/          Spring Boot (Java 25); акаунти, преводи, JWT
-│   ├── fraud-detection/       FastAPI (Python); проверка на преводи по правила
+│   ├── fraud-detection/       FastAPI (Python); маркира преводи над праг
 │   └── frontend/              React, Vite, TypeScript
 └── .github/workflows/         CI/CD процеси
     ├── bank-service-ci.yml    Maven build, тест, образ
@@ -36,7 +35,8 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 - `bank-service` (Spring Boot, Java 25, PostgreSQL). Управлява акаунти, баланси и
   преводи между тях; защитен с JWT автентикация.
 - `fraud-detection` (Python, FastAPI). Без състояние и без база. Преди да се
-  изпълни превод, го проверява спрямо набор от правила и отбелязва съмнителните.
+  изпълни превод, проверява дали сумата му е над зададен праг и го отбелязва
+  като съмнителен.
 - `frontend` (React 19, Vite, TypeScript). Статичен build зад nginx в
   контейнера; заявките към `/api` се пренасочват към bank-service.
 
@@ -45,18 +45,18 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 
 ## Локално пускане
 
-Нужни са Docker, JDK 25 и Node 22.
+Нужни са Docker, JDK 25, Node 22 и `pre-commit`.
 
 1. Копиране на примерните променливи:
    ```bash
    cp .env.example .env
    ```
    Задължителни променливи в `.env`:
-   - `BANK_DB_USER`, `BANK_DB_PASSWORD` — потребител и парола за PostgreSQL
+   - `BANK_DB_USER` и `BANK_DB_PASSWORD` са потребител и парола за PostgreSQL
      контейнера (docker compose ги подава на базата).
-   - `DB_USERNAME`, `DB_PASSWORD` — същите стойности, с които bank-service се
+   - `DB_USERNAME` и `DB_PASSWORD` са същите стойности, с които bank-service се
      свързва към базата.
-   - `JWT_SECRET` — стойност от `openssl rand -hex 32`.
+   - `JWT_SECRET` се генерира с `openssl rand -hex 32`.
 
    Останалите променливи (`BANK_DB_NAME`, `BANK_DB_PORT`, `DB_URL`, `FRAUD_URL`,
    `FRAUD_AMOUNT_THRESHOLD`) са с готови стойности по подразбиране.
@@ -72,7 +72,7 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
    ```bash
    cd apps/bank-service && ./mvnw spring-boot:run
    ```
-   Слуша на 8080.
+   Достъпен на порт 8080.
 
 4. Стартиране на frontend:
    ```bash
@@ -115,7 +115,8 @@ tab, но не блокира несвързани PR-и.
 
 Подписването е с Cosign keyless (Sigstore); подписът е по digest и се записва в
 Rekor. SBOM се генерира със Syft в CycloneDX формат и се прикача към образа като
-подписана attestation. Provenance идва от slsa-github-generator, който издава
+подписано удостоверение (attestation). Provenance идва от slsa-github-generator,
+който издава
 подписано удостоверение от кое хранилище, кой commit и кой workflow е изграден
 образът. При допускане Kyverno налага две политики в `dev`, `test` и `prod`.
 `verify-image-signatures` изисква валиден Cosign подпис, SLSA provenance и
@@ -134,8 +135,8 @@ digest. Придвижването към `test` и `prod` е ръчно пре�
 
 - Branch ruleset на `main` изисква pull request и преминали status checks
   (Build & test, Gitleaks (secrets), Semgrep (SAST), Build & publish container
-  image), плюс code scanning results (Gitleaks, Semgrep, Trivy с праг High or
-  higher), и забранява директен push.
+  image), както и code scanning results (Gitleaks, Semgrep, Trivy с праг High or
+  higher); забранява директен push.
 - Secret `GITOPS_TOKEN` (fine-grained PAT с Contents и Pull requests write върху
   gitops хранилището) за автоматичния dev pull request.
 - Gitleaks hook за тайни се активира еднократно след клониране с
