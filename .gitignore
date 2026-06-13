@@ -23,13 +23,6 @@
 hs_err_pid*
 replay_pid*
 
-# Internal planning (not for public repo)
-CLAUDE.md
-PLAN.md
-DEMO.md
-docs/
-bruno/
-
 # Secrets & credentials
 .env
 .env.*
