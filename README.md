@@ -13,7 +13,7 @@ CI/CD процеса в GitHub Actions workflow файлове. Акцентът
 | Хранилище | Отговорност |
 |---|---|
 | `diplomna-rabota` (това) | Изходен код на услугите, Docker файлове и CI/CD процеса в GitHub Actions workflow файлове |
-| `diplomna-rabota-infra` | Terraform за Azure (споделена основа, AKS клъстер, база и контролери) |
+| `diplomna-rabota-infra` | Terraform за Azure (споделена основа, AKS клъстер, база и компоненти в клъстера) |
 | `diplomna-rabota-gitops` | Желано състояние на клъстера (Helm charts, values по среда, ArgoCD приложения и Kyverno политики) |
 
 ## Структура
