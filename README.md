@@ -11,7 +11,7 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 
 | Хранилище | Отговорност |
 |---|---|
-| `diplomna-rabota` (това) | Изходен код на услугите, Dockerfile файлове, GitHub Actions CI/CD |
+| `diplomna-rabota` (това) | Изходен код на услугите, Dockerfile файлове и CI/CD процеса в GitHub Actions workflow файлове |
 | `diplomna-rabota-infra` | Terraform за Azure (споделена основа, AKS клъстер, база и контролери) |
 | `diplomna-rabota-gitops` | Желано състояние на клъстера (Helm charts, values по среда, ArgoCD приложения и Kyverno политики) |
 
@@ -21,7 +21,7 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 .
 ├── apps/                      трите микроуслуги
 │   ├── bank-service/          Spring Boot (Java 25); акаунти, преводи, JWT
-│   ├── fraud-detection/       FastAPI (Python); маркира преводи над праг
+│   ├── fraud-detection/       FastAPI (Python); засича съмнителни преводи
 │   └── frontend/              React, Vite, TypeScript
 └── .github/workflows/         CI/CD процеси
     ├── bank-service-ci.yml    Maven build, тест, образ
@@ -40,12 +40,12 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 - `frontend` (React 19, Vite, TypeScript). Статичен build зад nginx в
   контейнера; заявките към `/api` се пренасочват към bank-service.
 
-Трите образа се изграждат от официални базови образи, заключени на конкретна
-версия, и се внедряват през собствени Helm charts.
+Трите образа се изграждат от официални базови образи с точно определена версия
+и се внедряват през собствени Helm charts.
 
 ## Локално пускане
 
-Нужни са Docker, JDK 25, Node 22 и `pre-commit`.
+Нужно е да са инсталирани Docker, JDK 25, Node 22 и `pre-commit`.
 
 1. Копиране на примерните променливи:
    ```bash
@@ -53,10 +53,10 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
    ```
    Задължителни променливи в `.env`:
    - `BANK_DB_USER` и `BANK_DB_PASSWORD` са потребител и парола за PostgreSQL
-     контейнера (docker compose ги подава на базата).
+     базата (docker compose ги задава при стартиране).
    - `DB_USERNAME` и `DB_PASSWORD` са същите стойности, с които bank-service се
      свързва към базата.
-   - `JWT_SECRET` се генерира с `openssl rand -hex 32`.
+   - `JWT_SECRET` се генерира локално с командата `openssl rand -hex 32`.
 
    Останалите променливи (`BANK_DB_NAME`, `BANK_DB_PORT`, `DB_URL`, `FRAUD_URL`,
    `FRAUD_AMOUNT_THRESHOLD`) са с готови стойности по подразбиране.
@@ -106,7 +106,7 @@ provenance (slsa-github-generator), а `deploy-dev` обновява dev сре�
 
 Скенерите качват резултатите си в Code Scanning (SARIF). Блокира се нов проблем,
 въведен в самия PR; стар проблем, който вече е на `main`, се вижда в Security
-tab, но не блокира несвързани PR-и.
+tab, но не блокира несвързани с него заявки за сливане.
 
 Тайните се хващат на две нива. Локално преди commit с `pre-commit install`
 (еднократно след клониране) и в CI, където Gitleaks блокира сливането.
@@ -116,20 +116,20 @@ tab, но не блокира несвързани PR-и.
 Подписването е с Cosign keyless (Sigstore); подписът е по digest и се записва в
 Rekor. SBOM се генерира със Syft в CycloneDX формат и се прикача към образа като
 подписано удостоверение (attestation). Provenance идва от slsa-github-generator,
-който издава
-подписано удостоверение от кое хранилище, кой commit и кой workflow е изграден
-образът. При допускане Kyverno налага две политики в `dev`, `test` и `prod`.
-`verify-image-signatures` изисква валиден Cosign подпис, SLSA provenance и
-CycloneDX SBOM attestation, а `restrict-image-registries` допуска само образи от
-`ghcr.io/svetlioo/*`.
+който издава подписано удостоверение от кое хранилище, кой commit и кой workflow
+е изграден образът. При допускане Kyverno налага две политики в `dev`, `test` и
+`prod`. Политиката `verify-image-signatures` изисква валиден Cosign подпис, SLSA
+provenance и CycloneDX SBOM attestation, а `restrict-image-registries` допуска
+само образи от `ghcr.io/svetlioo/*`.
 
 ## Внедряване (GitOps)
 
 Средите `dev`, `test` и `prod` се синхронизират от ArgoCD спрямо gitops
-хранилището. `dev` се обновява автоматично от CI чрез pull request с новия таг и
-digest. Придвижването към `test` и `prod` е ръчно през Promote workflow в gitops
-хранилището, който копира таг и digest между средите и отваря pull request за
-одобрение. Придвижва се същият подписан образ, без повторно изграждане.
+хранилището. Средата `dev` се обновява автоматично от CI чрез pull request с
+новия таг и digest. Придвижването към `test` и `prod` е ръчно през Promote
+workflow в gitops хранилището, който копира таг и digest между средите и отваря
+pull request за одобрение. Придвижва се същият подписан образ, без повторно
+изграждане.
 
 ## Настройка на хранилището (еднократно)
 
