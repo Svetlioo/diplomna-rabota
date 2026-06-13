@@ -5,8 +5,8 @@ DevSecOps реализация, която защитава софтуернат
 
 Това хранилище съдържа изходния код на услугите, техните Docker файлове и
 CI/CD процеса в GitHub Actions workflow файлове. Акцентът е върху сигурната
-доставка чрез
-сканиране, подписване, SBOM, provenance и контролирано внедряване през GitOps.
+доставка чрез сканиране, подписване, SBOM, provenance и контролирано внедряване
+през GitOps.
 
 ## Трите хранилища
 
@@ -38,8 +38,8 @@ CI/CD процеса в GitHub Actions workflow файлове. Акцентът
 - `fraud-detection` (Python, FastAPI). Без състояние и без база. Преди да се
   изпълни превод, проверява дали сумата му е над зададен праг и го отбелязва
   като съмнителен.
-- `frontend` (React 19, Vite, TypeScript). Статичен build зад nginx в
-  контейнера; заявките към `/api` се пренасочват към bank-service.
+- `frontend` (React 19, Vite, TypeScript). Статичен build; заявките към `/api`
+  се пренасочват към bank-service.
 
 Трите образа се изграждат от официални базови образи с точно определена версия
 и се внедряват през собствени Helm charts.
@@ -141,7 +141,7 @@ pull request за одобрение. Придвижва се същият по�
 - Secret `GITOPS_TOKEN` (fine-grained PAT с Contents и Pull requests write върху
   gitops хранилището) за автоматичния dev pull request.
 - Gitleaks hook за тайни се активира еднократно след клониране с
-  `pre-commit install`.
+  `pre-commit install` (ако още не е инсталиран).
 
 ## Лиценз
 
