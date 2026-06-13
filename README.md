@@ -20,13 +20,15 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
 
 ```
 .
-├── apps/
-│   ├── bank-service/      Spring Boot (Java 25); акаунти, преводи, JWT
-│   ├── fraud-detection/   FastAPI (Python); проверка на преводи по правила
-│   └── frontend/          React, Vite, TypeScript; раздаван от nginx
-├── .github/workflows/     CI за всяка услуга и repo-security (скенери)
-├── docker-compose.yml     Локална база и fraud-detection
-└── .env.example           Примерни променливи за локалното пускане
+├── apps/                      трите микроуслуги
+│   ├── bank-service/          Spring Boot (Java 25); акаунти, преводи, JWT
+│   ├── fraud-detection/       FastAPI (Python); проверка на преводи по правила
+│   └── frontend/              React, Vite, TypeScript
+└── .github/workflows/         CI/CD процеси
+    ├── bank-service-ci.yml    Maven build, тест, образ
+    ├── fraud-detection-ci.yml pip build, тест, образ
+    ├── frontend-ci.yml        Node build, тест, образ
+    └── repo-security.yml      скенери върху цялото репо
 ```
 
 ## Услуги
@@ -35,7 +37,7 @@ CI/CD процеса в GitHub Actions. Акцентът е върху сигу�
   преводи между тях; защитен с JWT автентикация.
 - `fraud-detection` (Python, FastAPI). Без състояние и без база. Преди да се
   изпълни превод, го проверява спрямо набор от правила и отбелязва съмнителните.
-- `frontend` (React 19, Vite, TypeScript). Статичен build, който nginx раздава в
+- `frontend` (React 19, Vite, TypeScript). Статичен build зад nginx в
   контейнера; заявките към `/api` се пренасочват към bank-service.
 
 Трите образа се изграждат от официални базови образи, заключени на конкретна
