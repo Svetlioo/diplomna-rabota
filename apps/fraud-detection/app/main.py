@@ -8,7 +8,7 @@ from pydantic import BaseModel
 # Transfers at or above this amount are flagged. Rule-based: no model, no state, no DB.
 AMOUNT_THRESHOLD = float(os.getenv("FRAUD_AMOUNT_THRESHOLD", "10000"))
 
-app = FastAPI(title="fraud-detection", version="0.0.2")
+app = FastAPI(title="fraud-detection", version="0.0.3")
 
 
 class EvaluateRequest(BaseModel):
