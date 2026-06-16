@@ -1,20 +1,21 @@
 """Rule-based fraud screening service for the diploma banking demo."""
 
 import os
+from decimal import Decimal
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 # Transfers at or above this amount are flagged. Rule-based: no model, no state, no DB.
-AMOUNT_THRESHOLD = float(os.getenv("FRAUD_AMOUNT_THRESHOLD", "10000"))
+AMOUNT_THRESHOLD = Decimal(os.getenv("FRAUD_AMOUNT_THRESHOLD", "10000"))
 
-app = FastAPI(title="fraud-detection", version="0.0.3")
+app = FastAPI(title="fraud-detection", version="0.0.4")
 
 
 class EvaluateRequest(BaseModel):
     ownerId: str
     toIban: str
-    amount: float
+    amount: Decimal
 
 
 class Verdict(BaseModel):
