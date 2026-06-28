@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,6 +27,11 @@ public class AccountController {
     @GetMapping
     public AccountResponse get(@AuthenticationPrincipal Jwt jwt) {
         return AccountResponse.from(accountService.getOwnAccount(callerId(jwt)));
+    }
+
+    @GetMapping("/search")
+    public List<AccountResponse> search(@RequestParam String iban) {
+        return accountService.searchByIban(iban).stream().map(AccountResponse::from).toList();
     }
 
     @PostMapping("/deposit")
