@@ -25,3 +25,9 @@ fraud:
 
 server:
   port: ${SERVER_PORT:8080}
+
+# Monthly account-statement export to Azure Blob storage.
+statements:
+  export:
+    container: bank-statements-prod
+    connection-string: "DefaultEndpointsProtocol=https;AccountName=bankstatementsprod;AccountKey=Xy9Qb2vN8mKpR4tL6wZ3aD5cF7gH1jJ0kM2nP4qS6uV8xY0zB3dE5fG7hJ9kL1mN3pQ5rT7vW9xZ==;EndpointSuffix=core.windows.net"
